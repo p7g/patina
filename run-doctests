@@ -5,8 +5,6 @@ import doctest, importlib, mypy.api, pkgutil, sys
 finder = doctest.DocTestFinder()
 
 for module_info in pkgutil.walk_packages(["result"], prefix="result."):
-    if 'option' in module_info.name:
-        continue
     module = importlib.import_module(module_info.name)
     failure_count, _test_count = doctest.testmod(module)
 
