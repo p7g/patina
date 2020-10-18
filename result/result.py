@@ -23,10 +23,10 @@ A simple function returning Result might be defined and used like so:
 ...         return Err("invalid version")
 ...
 >>> version = parse_version(bytes([1, 2, 3, 4]))
->>> if isinstance(version, Ok):
-...     print(f"working with version: {version.value}")
-... elif isinstance(version, Err):
-...     print(f"error parsing header: {version.error}")
+>>> if version.is_ok():
+...     print(f"working with version: {version.unwrap()}")
+... else:
+...     print(f"error parsing header: {version.unwrap_err()}")
 ...
 working with version: Version.version_1
 
@@ -59,11 +59,12 @@ True
 True
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, cast, Callable, Generic, Iterator, Type, TypeVar
+import enum
+from typing import Any, cast, Callable, Generic, Iterator, Type, TypeVar, Union
+from typing_extensions import final
 
 from .option import Option, Some, None_
-from ._utils import dependent_hash, dependent_ord
+from ._utils import dependent_hash, dependent_ord, _nothing, _Nothing
 
 __all__ = ("Result", "Ok", "Err")
 
@@ -73,10 +74,57 @@ U = TypeVar("U")
 F = TypeVar("F")
 
 
-class Result(Generic[T, E], ABC):
+class _ResultFactory(Generic[T, U, E]):
+    def __getitem__(self, *args, **kwargs):
+        return self
+
+
+class _OkFactory(_ResultFactory):
+    def __call__(self, value: T) -> "Result[T, E]":
+        return Result(right=value)
+
+
+class _ErrFactory(_ResultFactory):
+    def __call__(self, error: E) -> "Result[T, E]":
+        return Result(left=error)
+
+
+@final
+class _ResultState(enum.Enum):
+    ok = enum.auto()
+    err = enum.auto()
+
+
+def _result_value_attr(r: "Result[T, E]") -> str:
+    return "_left" if r._state is _ResultState.err else "_right"
+
+
+@dependent_ord(_result_value_attr)
+class Result(Generic[T, E]):
     """Result is a type that represents either success (Ok) or failure (Err)."""
 
-    @abstractmethod
+    __slots__ = ("_state", "_left", "_right")
+    _state: _ResultState
+    _left: E
+    _right: T
+
+    def __init__(
+        self,
+        *,
+        left: Union[_Nothing, E] = _nothing,
+        right: Union[_Nothing, T] = _nothing,
+    ):
+        if left is _nothing and right is not _nothing:
+            self._state = _ResultState.ok
+            self._right = right
+        elif left is not _nothing and right is _nothing:
+            self._state = _ResultState.err
+            self._left = left
+        else:
+            raise AssertionError(
+                "One and only one of `left` and `right` must be supplied to Result.__init__"
+            )
+
     def is_ok(self) -> bool:
         """Returns ``True`` if the result is Ok.
 
@@ -90,8 +138,8 @@ class Result(Generic[T, E], ABC):
         >>> x.is_ok()
         False
         """
+        return self._state is _ResultState.ok
 
-    @abstractmethod
     def is_err(self) -> bool:
         """Returns ``True`` if the result is Err.
 
@@ -105,8 +153,8 @@ class Result(Generic[T, E], ABC):
         >>> x.is_err()
         True
         """
+        return self._state is _ResultState.err
 
-    @abstractmethod
     def ok(self) -> Option[T]:
         """Converts from ``Result[T, E]`` to ``Option[T]``.
         Converts ``self`` into Option[T], discarding the error, if any.
@@ -121,8 +169,10 @@ class Result(Generic[T, E], ABC):
         >>> x.ok()
         None_
         """
+        if self._state is _ResultState.err:
+            return Option.None_()
+        return Option.Some(self._right)
 
-    @abstractmethod
     def err(self) -> Option[E]:
         """Converts from ``Result[T, E]`` to ``Option[E]``.
         Converts ``self`` into Option[E], discarding the success value, if any.
@@ -137,8 +187,10 @@ class Result(Generic[T, E], ABC):
         >>> x.err()
         Some('Nothing here')
         """
+        if self._state is _ResultState.ok:
+            return Option.None_()
+        return Option.Some(self._left)
 
-    @abstractmethod
     def map(self, op: Callable[[T], U]) -> "Result[U, E]":
         """Maps a ``Result[T, E]`` to ``Result[U, E]`` by applying a function to
         a contained Ok value, leaving an Err value untouched.
@@ -156,16 +208,18 @@ class Result(Generic[T, E], ABC):
         >>> line = "1\\n2\\n3\\n4\\n5\\n"
         >>> for num in line.splitlines():
         ...     result = try_parse(num).map(lambda i: i * 2)
-        ...     if isinstance(result, Ok):
-        ...         print(result.value)
+        ...     if result.is_ok():
+        ...         print(result.unwrap())
         2
         4
         6
         8
         10
         """
+        if self._state is _ResultState.err:
+            return Err(self._left)
+        return Ok(op(self._right))
 
-    @abstractmethod
     def map_or(self, default: U, f: Callable[[T], U]) -> U:
         """Applies a function to the contained value (if Ok), or returns the
         provided default (if Err).
@@ -182,8 +236,10 @@ class Result(Generic[T, E], ABC):
         >>> x.map_or(42, lambda v: len(v))
         42
         """
+        if self._state is _ResultState.err:
+            return default
+        return f(self._right)
 
-    @abstractmethod
     def map_or_else(self, default: Callable[[E], U], f: Callable[[T], U]) -> U:
         """Maps a ``Result[T, E]`` to ``U`` by applying a function to a
         contained Ok value, or a fallback function to a contained Err value.
@@ -203,8 +259,10 @@ class Result(Generic[T, E], ABC):
         >>> x.map_or_else(lambda e: k * 2, lambda v: len(v))
         42
         """
+        if self._state is _ResultState.err:
+            return default(self._left)
+        return f(self._right)
 
-    @abstractmethod
     def map_err(self, op: Callable[[E], F]) -> "Result[T, F]":
         """Maps a ``Result[T, E]`` to ``Result[T, F]`` by applying a function to
         a contained Err value, leaving an Ok value untouched.
@@ -225,8 +283,10 @@ class Result(Generic[T, E], ABC):
         >>> x.map_err(stringify)
         Err('error code: 13')
         """
+        if self._state is _ResultState.ok:
+            return Ok(self._right)
+        return Err(op(self._left))
 
-    @abstractmethod
     def iter(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
 
@@ -244,6 +304,8 @@ class Result(Generic[T, E], ABC):
             ...
         StopIteration
         """
+        if self._state is _ResultState.ok:
+            yield self._right
 
     def __iter__(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
@@ -264,7 +326,6 @@ class Result(Generic[T, E], ABC):
         """
         return self.iter()
 
-    @abstractmethod
     def and_(self, res: "Result[U, E]") -> "Result[U, E]":
         """Returns ``res`` if the result is Ok, otherwise returns the Err value
         of ``self``.
@@ -291,8 +352,10 @@ class Result(Generic[T, E], ABC):
         >>> x.and_(y)
         Ok('different result type')
         """
+        if self._state is _ResultState.ok:
+            return res
+        return Err(self._left)
 
-    @abstractmethod
     def and_then(self, op: Callable[[T], "Result[U, E]"]) -> "Result[U, E]":
         """Calls ``op`` if the result is Ok, otherwise returns the Err value of
         ``self``.
@@ -311,11 +374,13 @@ class Result(Generic[T, E], ABC):
         Err(4)
         >>> Ok[int, int](2).and_then(err).and_then(sq)
         Err(2)
-        >>> Err[int, int](3).and_then(sq).and_then(sq)
+        >>> Err(3).and_then(sq).and_then(sq)
         Err(3)
         """
+        if self._state is _ResultState.err:
+            return Err(self._left)
+        return op(self._right)
 
-    @abstractmethod
     def or_(self, res: "Result[T, F]") -> "Result[T, F]":
         """Returns ``res`` if the result is Err, otherwise returns the Ok result
         of self.
@@ -346,8 +411,10 @@ class Result(Generic[T, E], ABC):
         >>> x.or_(y)
         Ok(2)
         """
+        if self._state is _ResultState.ok:
+            return Ok(self._right)
+        return res
 
-    @abstractmethod
     def or_else(self, op: Callable[[E], "Result[T, F]"]) -> "Result[T, F]":
         """Calls ``op`` if the result is Err, otherwise returns returns the Ok
         value from self.
@@ -369,8 +436,10 @@ class Result(Generic[T, E], ABC):
         >>> Err[int, int](3).or_else(err).or_else(err)
         Err(3)
         """
+        if self._state is _ResultState.ok:
+            return Ok(self._right)
+        return op(self._left)
 
-    @abstractmethod
     def unwrap_or(self, default: T) -> T:
         """Returns the contained Ok value or a provided default.
 
@@ -389,21 +458,26 @@ class Result(Generic[T, E], ABC):
         >>> x.unwrap_or(default)
         2
         """
+        if self._state is _ResultState.err:
+            return default
+        return self._right
 
-    @abstractmethod
     def unwrap_or_else(self, op: Callable[[E], T]) -> T:
         """Returns the contained Ok value or computes it from a closure.
 
         Basic usage:
 
         >>> def count(x: str) -> int: return len(x)
-        >>> Ok[int, str](2).unwrap_or_else(count)
+        ...
+        >>> Ok(2).unwrap_or_else(count)
         2
         >>> Err[int, str]("foo").unwrap_or_else(count)
         3
         """
+        if self._state is _ResultState.err:
+            return op(self._left)
+        return self._right
 
-    @abstractmethod
     def expect(self, msg: str) -> T:
         """Returns the contained Ok value, consuming the ``self`` value.
 
@@ -418,8 +492,10 @@ class Result(Generic[T, E], ABC):
             ...
         AssertionError: Testing expect: 'emergency failure'
         """
+        if self._state is _ResultState.err:
+            raise AssertionError(f"{msg}: {repr(self._left)}")
+        return self._right
 
-    @abstractmethod
     def unwrap(self) -> T:
         """Returns the contained Ok value, consuming the ``self`` value.
 
@@ -443,8 +519,10 @@ class Result(Generic[T, E], ABC):
             ...
         AssertionError: emergency failure
         """
+        if self._state is _ResultState.err:
+            raise AssertionError(self._left)
+        return self._right
 
-    @abstractmethod
     def expect_err(self, msg: str) -> E:
         """Returns the contained Err value.
 
@@ -459,8 +537,10 @@ class Result(Generic[T, E], ABC):
             ...
         AssertionError: Testing expect_err: 10
         """
+        if self._state is _ResultState.ok:
+            raise AssertionError(f"{msg}: {repr(self._right)}")
+        return self._left
 
-    @abstractmethod
     def unwrap_err(self) -> E:
         """Returns the contained Err value, consuming the ``self`` value.
 
@@ -477,158 +557,20 @@ class Result(Generic[T, E], ABC):
         >>> x.unwrap_err()
         'emergency failure'
         """
+        if self._state is _ResultState.ok:
+            raise AssertionError(self._right)
+        return self._left
 
-
-@dependent_ord("value")
-class Ok(Result[T, E]):
-    """Contains the success value."""
-
-    __slots__ = ("value",)
-
-    def __init__(self, value: T):
-        self.value = value
-
-    def is_ok(self) -> bool:
-        return True
-
-    def is_err(self) -> bool:
-        return False
-
-    def ok(self) -> Option[T]:
-        return Some(self.value)
-
-    def err(self) -> Option[E]:
-        return None_()
-
-    def map(self, op: Callable[[T], U]) -> "Result[U, E]":
-        return cast(Type[Ok[U, E]], type(self))(op(self.value))
-
-    def map_or(self, default: U, f: Callable[[T], U]) -> U:
-        return f(self.value)
-
-    def map_or_else(self, default: Callable[[E], U], f: Callable[[T], U]) -> U:
-        return f(self.value)
-
-    def map_err(self, op: Callable[[E], F]) -> "Result[T, F]":
-        return cast(Ok[T, F], self)
-
-    def iter(self) -> Iterator[T]:
-        yield self.value
-
-    def and_(self, res: "Result[U, E]") -> "Result[U, E]":
-        return res
-
-    def and_then(self, op: Callable[[T], "Result[U, E]"]) -> "Result[U, E]":
-        return op(self.value)
-
-    def or_(self, res: "Result[T, F]") -> "Result[T, F]":
-        return cast(Ok[T, F], self)
-
-    def or_else(self, op: Callable[[E], "Result[T, F]"]) -> "Result[T, F]":
-        return cast(Ok[T, F], self)
-
-    def unwrap_or(self, default: T) -> T:
-        return self.value
-
-    def unwrap_or_else(self, op: Callable[[E], T]) -> T:
-        return self.value
-
-    def expect(self, msg: str) -> T:
-        return self.value
-
-    def unwrap(self) -> T:
-        return self.value
-
-    def expect_err(self, msg: str) -> E:
-        raise AssertionError(f"{msg}: {repr(self.value)}")
-
-    def unwrap_err(self) -> E:
-        raise AssertionError(self.value)
+    __hash__ = dependent_hash(_result_value_attr)
 
     def __repr__(self):
-        return f"Ok({repr(self.value)})"
+        if self._state is _ResultState.ok:
+            return f"Ok({repr(self._right)})"
+        return f"Err({repr(self._left)})"
 
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.value == other.value
-
-    __hash__ = dependent_hash("value")
+    Ok = _OkFactory()
+    Err = _ErrFactory()
 
 
-@dependent_ord("error")
-class Err(Result[T, E]):
-    """Contains the error value."""
-
-    __slots__ = ("error",)
-
-    def __init__(self, error: E):
-        self.error = error
-
-    def is_ok(self) -> bool:
-        return False
-
-    def is_err(self) -> bool:
-        return True
-
-    def ok(self) -> Option[T]:
-        return None_()
-
-    def err(self) -> Option[E]:
-        return Some(self.error)
-
-    def map(self, op: Callable[[T], U]) -> "Result[U, E]":
-        return cast(Err[U, E], self)
-
-    def map_or(self, default: U, f: Callable[[T], U]) -> U:
-        return default
-
-    def map_or_else(self, default: Callable[[E], U], f: Callable[[T], U]) -> U:
-        return default(self.error)
-
-    def map_err(self, op: Callable[[E], F]) -> "Result[T, F]":
-        return cast(Type[Err[T, F]], type(self))(op(self.error))
-
-    def iter(self) -> Iterator[T]:
-        return
-        yield
-
-    def and_(self, res: "Result[U, E]") -> "Result[U, E]":
-        return cast(Err[U, E], self)
-
-    def and_then(self, op: Callable[[T], "Result[U, E]"]) -> "Result[U, E]":
-        return cast(Err[U, E], self)
-
-    def or_(self, res: "Result[T, F]") -> "Result[T, F]":
-        return res
-
-    def or_else(self, op: Callable[[E], "Result[T, F]"]) -> "Result[T, F]":
-        return op(self.error)
-
-    def unwrap_or(self, default: T) -> T:
-        return default
-
-    def unwrap_or_else(self, op: Callable[[E], T]) -> T:
-        return op(self.error)
-
-    def expect(self, msg: str) -> T:
-        raise AssertionError(f"{msg}: {repr(self.error)}")
-
-    def unwrap(self) -> T:
-        raise AssertionError(self.error)
-
-    def expect_err(self, msg: str) -> E:
-        return self.error
-
-    def unwrap_err(self) -> E:
-        return self.error
-
-    def __repr__(self):
-        return f"Err({repr(self.error)})"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.error == other.error
-
-    __hash__ = dependent_hash("error")
+Ok = Result.Ok
+Err = Result.Err

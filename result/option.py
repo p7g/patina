@@ -97,21 +97,15 @@ from typing import (
     TypeVar,
     Union,
 )
-from typing_extensions import final, Final
 
 from .ref import Ref
+from ._utils import _nothing, _Nothing
+
+__all__ = ("Option", "Some", "None_")
 
 T = TypeVar("T")
 U = TypeVar("U")
 E = TypeVar("E")
-
-
-@final
-class _Nothing(enum.Enum):
-    nothing = 0
-
-
-_nothing: Final = _Nothing.nothing
 
 
 class Option(Generic[T]):
@@ -592,15 +586,18 @@ class Option(Generic[T]):
             return "None_"
         return f"Some({repr(self._value)})"
 
+    @classmethod
+    def Some(cls, value: T) -> "Option[T]":
+        """Some value ``T``."""
+        return cls(value)
 
-def Some(value: T) -> Option[T]:
-    """Some value ``T``."""
-    return Option(value)
+    @classmethod
+    def None_(cls) -> "Option[T]":
+        """No value."""
+        return cls()
 
 
-def None_() -> Option[T]:
-    """No value."""
-    return Option()
-
+Some = Option.Some
+None_ = Option.None_
 
 from .result import Result, Ok, Err
