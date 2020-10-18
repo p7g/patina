@@ -8,4 +8,9 @@ See the original Rust documentation here_.
 ----
 
 .. automodule:: result.result
-   :members:
+
+   The Result Type
+   ---------------
+
+   .. autoclass:: Result
+      :members:

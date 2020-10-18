@@ -4,6 +4,9 @@
 enum with the variants, ``Ok(T)``, representing success and containing a value,
 and ``Err(E)``, representing error and containing an error value.
 
+Examples
+--------
+
 A simple function returning Result might be defined and used like so:
 
 >>> from enum import auto, Enum
