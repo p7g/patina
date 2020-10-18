@@ -30,7 +30,7 @@ A simple function returning Result might be defined and used like so:
 ...
 working with version: Version.version_1
 
-Pattern matching on ``Result``s is clear and straightforward for simple cases
+Pattern matching on ``Result``\\s is clear and straightforward for simple cases
 (in Rust), but ``Result`` comes with some convenience methods that make working
 with it more succinct.
 
