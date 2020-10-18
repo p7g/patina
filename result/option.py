@@ -89,9 +89,7 @@ the biggest animal is blue whale
 import enum
 from typing import (
     cast,
-    final,
     Callable,
-    Final,
     Generic,
     Iterator,
     Tuple,
@@ -99,6 +97,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from typing_extensions import final, Final
 
 from .ref import Ref
 
