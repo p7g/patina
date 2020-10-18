@@ -17,7 +17,7 @@ for module_info in pkgutil.walk_packages(["result"], prefix="result."):
         src = f"from {module_info.name} import *\n" + "".join(
             [e.source for e in test.examples]
         )
-        stdout, stderr, result = mypy.api.run(["-c", src])
+        stdout, stderr, result = mypy.api.run(["--allow-redefinition", "-c", src])
         if result != 0:
             print(
                 f"Type check failed for {test.name} in {test.filename}", file=sys.stderr

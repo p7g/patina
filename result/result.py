@@ -25,7 +25,7 @@ A simple function returning Result might be defined and used like so:
 >>> version = parse_version(bytes([1, 2, 3, 4]))
 >>> if isinstance(version, Ok):
 ...     print(f"working with version: {version.value}")
-... else:
+... elif isinstance(version, Err):
 ...     print(f"error parsing header: {version.error}")
 ...
 working with version: Version.version_1
@@ -305,13 +305,13 @@ class Result(Generic[T, E], ABC):
         ...
         >>> def err(x: int) -> Result[int, int]: return Err(x)
         ...
-        >>> Ok(2).and_then(sq).and_then(sq)
+        >>> Ok[int, int](2).and_then(sq).and_then(sq)
         Ok(16)
-        >>> Ok(2).and_then(sq).and_then(err)
+        >>> Ok[int, int](2).and_then(sq).and_then(err)
         Err(4)
-        >>> Ok(2).and_then(err).and_then(sq)
+        >>> Ok[int, int](2).and_then(err).and_then(sq)
         Err(2)
-        >>> Err(3).and_then(sq).and_then(sq)
+        >>> Err[int, int](3).and_then(sq).and_then(sq)
         Err(3)
         """
 
@@ -360,13 +360,13 @@ class Result(Generic[T, E], ABC):
         ...
         >>> def err(x: int) -> Result[int, int]: return Err(x)
         ...
-        >>> Ok(2).or_else(sq).or_else(sq)
+        >>> Ok[int, int](2).or_else(sq).or_else(sq)
         Ok(2)
-        >>> Ok(2).or_else(err).or_else(sq)
+        >>> Ok[int, int](2).or_else(err).or_else(sq)
         Ok(2)
-        >>> Err(3).or_else(sq).or_else(err)
+        >>> Err[int, int](3).or_else(sq).or_else(err)
         Ok(9)
-        >>> Err(3).or_else(err).or_else(err)
+        >>> Err[int, int](3).or_else(err).or_else(err)
         Err(3)
         """
 
@@ -397,9 +397,9 @@ class Result(Generic[T, E], ABC):
         Basic usage:
 
         >>> def count(x: str) -> int: return len(x)
-        >>> Ok(2).unwrap_or_else(count)
+        >>> Ok[int, str](2).unwrap_or_else(count)
         2
-        >>> Err("foo").unwrap_or_else(count)
+        >>> Err[int, str]("foo").unwrap_or_else(count)
         3
         """
 
