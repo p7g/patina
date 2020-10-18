@@ -20,13 +20,13 @@ value and take action, always accounting for the None\\_ case.
 
 >>> def divide(numerator: float, denominator: float) -> Option[float]:
 ...     if denominator == 0.0:
-...         return None\\_()
+...         return None_()
 ...     return Some(numerator / denominator)
 ...
 >>> result = divide(2.0, 3.0)
 >>>
->>> if isinstance(result, Some):
-...     print(f"Result: {result.value}")
+>>> if result.is_some():
+...     print(f"Result: {result.unwrap()}")
 ... else:
 ...     print(f"Cannot divide by 0")
 ...
@@ -39,12 +39,13 @@ Basic pattern matching on Option:
 
 >>> msg = Some("howdy")
 >>>
->>> if isinstance(msg, Some):
-...     print(msg.value)
+>>> if msg.is_some():
+...     print(msg.unwrap())
 ...
+howdy
 >>> unwrapped_msg = msg.unwrap_or("default message")
 >>> unwrapped_msg
-howdy
+'howdy'
 
 Initialize a result to None\\_ before a loop:
 
@@ -69,8 +70,8 @@ Initialize a result to None\\_ before a loop:
 ... ]
 >>>
 >>> # We're going to search for the name of the biggest animal, but to start
->>> # with we've just got `None\\_`
->>> name_of_biggest_animal = None\\_()
+>>> # with we've just got `None_`
+>>> name_of_biggest_animal: Option[str] = None_()
 >>> size_of_biggest_animal = 0
 >>> for big_thing in all_the_big_things:
 ...     if isinstance(big_thing, AnimalKingdom) \\
@@ -78,8 +79,8 @@ Initialize a result to None\\_ before a loop:
 ...         size_of_biggest_animal = big_thing.size
 ...         name_of_biggest_animal = Some(big_thing.name)
 ...
->>> if isinstance(name_of_biggest_animal, Some):
-...     print(f"the biggest animal is {name_of_biggest_animal.value}")
+>>> if name_of_biggest_animal.is_some():
+...     print(f"the biggest animal is {name_of_biggest_animal.unwrap()}")
 ... else:
 ...     print("there are no animals :(")
 ...
@@ -184,7 +185,7 @@ class Option(Generic[T]):
         >>> x.unwrap()
         Traceback (most recent call last):
             ...
-        AssertionError: called `Option.unwrap` on a `None` value
+        AssertionError: called `Option.unwrap` on a `None_` value
         """
         if self._value is _nothing:
             raise AssertionError("called `Option.unwrap` on a `None_` value")
@@ -199,7 +200,7 @@ class Option(Generic[T]):
 
         >>> Some("car").unwrap_or("bike")
         'car'
-        >>> None_().unwrap_or("bike")
+        >>> None_[str]().unwrap_or("bike")
         'bike'
         """
         if self._value is _nothing:
@@ -212,7 +213,7 @@ class Option(Generic[T]):
         >>> k = 10
         >>> Some(4).unwrap_or_else(lambda: 2 * k)
         4
-        >>> None_().unwrap_or_else(lambda: 2 * k)
+        >>> None_[int]().unwrap_or_else(lambda: 2 * k)
         20
         """
         if self._value is _nothing:
@@ -310,7 +311,7 @@ class Option(Generic[T]):
         >>> x = Some(4)
         >>> next(x.iter())
         4
-        >>> x = None_()
+        >>> x: Option[int] = None_()
         >>> next(x.iter())
         Traceback (most recent call last):
             ...
@@ -325,7 +326,7 @@ class Option(Generic[T]):
         >>> x = Some(4)
         >>> next(iter(x))
         4
-        >>> x = None_()
+        >>> x: Option[int] = None_()
         >>> next(iter(x))
         Traceback (most recent call last):
             ...
@@ -415,10 +416,10 @@ class Option(Generic[T]):
         is lazily evaluated.
 
         >>> x = Some(2)
-        >>> y = None_()
+        >>> y: Option[int] = None_()
         >>> x.or_(y)
         Some(2)
-        >>> x = None_()
+        >>> x: Option[int] = None_()
         >>> y = Some(100)
         >>> x.or_(y)
         Some(100)
@@ -427,7 +428,7 @@ class Option(Generic[T]):
         >>> x.or_(y)
         Some(2)
         >>> x: Option[int] = None_()
-        >>> y = None_()
+        >>> y: Option[int] = None_()
         >>> x.or_(y)
         None_
         """
@@ -445,9 +446,9 @@ class Option(Generic[T]):
         ...
         >>> Some("barbarians").or_else(vikings)
         Some('barbarians')
-        >>> None_().or_else(vikings)
+        >>> None_[str]().or_else(vikings)
         Some('vikings')
-        >>> None_().or_else(nobody)
+        >>> None_[str]().or_else(nobody)
         None_
         """
         if self._value is _nothing:
@@ -477,7 +478,7 @@ class Option(Generic[T]):
         """
         if self._value is _nothing and optb._value is not _nothing:
             return Some(optb._value)
-        if self._value is not _nothing and optb._value is not _nothing:
+        if self._value is not _nothing and optb._value is _nothing:
             return Some(self._value)
         return None_()
 
@@ -498,7 +499,7 @@ class Option(Generic[T]):
         """Inserts ``v`` into the option if it is ``None_``, then returns
         a reference to the contained value.
 
-        >>> x = None_()
+        >>> x: Option[int] = None_()
         >>> y = x.get_or_insert(5)
         >>> y.get()
         5
@@ -514,7 +515,7 @@ class Option(Generic[T]):
         """Inserts a value computed from ``f`` into the option if it is
         ``None_``, then returns a reference to the contained value.
 
-        >>> x = None_()
+        >>> x: Option[int] = None_()
         >>> y = x.get_or_insert_with(lambda: 5)
         >>> y.get()
         5
@@ -558,12 +559,12 @@ class Option(Generic[T]):
         Some(5)
         >>> old
         Some(2)
-        >>> x = None_()
+        >>> x = None_[int]()
         >>> old = x.replace(3)
         >>> x
         Some(3)
         >>> old
-        None_()
+        None_
         """
         old_value, self._value = self._value, value
         if old_value is _nothing:
@@ -580,7 +581,7 @@ class Option(Generic[T]):
         >>> y = Some("hi")
         >>> z = None_[int]()
         >>> x.zip(y)
-        Some((1, "hi"))
+        Some((1, 'hi'))
         >>> x.zip(z)
         None_
         """
