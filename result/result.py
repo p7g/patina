@@ -1,8 +1,8 @@
 """Error handling with the Result type.
 
-Result[T, E] is the type used for returning and propagating errors. It is an
-enum with the variants, Ok(T), representing success and containing a value, and
-Err(E), representing error and containing an error value.
+``Result[T, E]`` is the type used for returning and propagating errors. It is an
+enum with the variants, ``Ok(T)``, representing success and containing a value,
+and ``Err(E)``, representing error and containing an error value.
 
 A simple function returning Result might be defined and used like so:
 
@@ -30,9 +30,9 @@ A simple function returning Result might be defined and used like so:
 ...
 working with version: Version.version_1
 
-Pattern matching on `Result`s is clear and straightforward for simple cases (in
-Rust), but `Result` comes with some convenience methods that make working with
-it more succinct.
+Pattern matching on ``Result``s is clear and straightforward for simple cases
+(in Rust), but ``Result`` comes with some convenience methods that make working
+with it more succinct.
 
 >>> good_result: Result[int, int] = Ok(10)
 >>> bad_result: Result[int, int] = Err(10)
@@ -43,7 +43,7 @@ True
 >>> bad_result.is_err() and not bad_result.is_ok()
 True
 >>>
->>> # `map` consumes the `Result` (in Rust) and produces another.
+>>> # `map` consumes the `Result` and produces another.
 >>> good_result: Result[int, int] = good_result.map(lambda i: i + 1)
 >>> bad_result: Result[int, int] = bad_result.map(lambda i: i - 1)
 >>>
@@ -78,13 +78,14 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def is_ok(self) -> bool:
-        """Returns `True` if the result is Ok.
+        """Returns ``True`` if the result is Ok.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(-3)
         >>> x.is_ok()
         True
-
+        >>>
         >>> x: Result[int, str] = Err("Some error message")
         >>> x.is_ok()
         False
@@ -92,13 +93,14 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def is_err(self) -> bool:
-        """Returns `True` if the result is Err.
+        """Returns ``True`` if the result is Err.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(-3)
         >>> x.is_err()
         False
-
+        >>>
         >>> x: Result[int, str] = Err("Some error message")
         >>> x.is_err()
         True
@@ -106,14 +108,15 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def ok(self) -> Option[T]:
-        """Converts from `Result[T, E]` to `Option[T]`.
-        Converts `self` into Option[T], discarding the error, if any.
+        """Converts from ``Result[T, E]`` to ``Option[T]``.
+        Converts ``self`` into Option[T], discarding the error, if any.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(2)
         >>> x.ok()
         Some(2)
-
+        >>>
         >>> x: Result[int, str] = Err("Nothing here")
         >>> x.ok()
         None_
@@ -121,14 +124,15 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def err(self) -> Option[E]:
-        """Converts from `Result[T, E]` to `Option[E]`.
-        Converts `self` into Option[E], discarding the success value, if any.
+        """Converts from ``Result[T, E]`` to ``Option[E]``.
+        Converts ``self`` into Option[E], discarding the success value, if any.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(2)
         >>> x.err()
         None_
-
+        >>>
         >>> x: Result[int, str] = Err("Nothing here")
         >>> x.err()
         Some('Nothing here')
@@ -136,12 +140,13 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def map(self, op: Callable[[T], U]) -> "Result[U, E]":
-        """Maps a `Result[T, E]` to `Result[U, E]` by applying a function to a
-        contained Ok value, leaving an Err value untouched.
+        """Maps a ``Result[T, E]`` to ``Result[U, E]`` by applying a function to
+        a contained Ok value, leaving an Err value untouched.
 
         This function can be used to compose the results of two functions.
 
         Print the numbers on each line of a string multiplied by two.
+
         >>> def try_parse(s: str) -> Result[int, ValueError]:
         ...     try:
         ...         return Ok(int(s))
@@ -165,14 +170,14 @@ class Result(Generic[T, E], ABC):
         """Applies a function to the contained value (if Ok), or returns the
         provided default (if Err).
 
-        Arguments passed to `map_or` are eagerly evaluated; if you are passing
-        the result of a function call, it is recommended to use `map_or_else`,
+        Arguments passed to ``map_or`` are eagerly evaluated; if you are passing
+        the result of a function call, it is recommended to use ``map_or_else``,
         which is lazily evaluated.
 
         >>> x: Result[str, str] = Ok("foo")
         >>> x.map_or(42, lambda v: len(v))
         3
-
+        >>>
         >>> x: Result[str, str] = Err("bar")
         >>> x.map_or(42, lambda v: len(v))
         42
@@ -180,19 +185,20 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def map_or_else(self, default: Callable[[E], U], f: Callable[[T], U]) -> U:
-        """Maps a `Result[T, E]` to `U` by applying a function to a contained Ok
-        value, or a fallback function to a contained Err value.
+        """Maps a ``Result[T, E]`` to ``U`` by applying a function to a
+        contained Ok value, or a fallback function to a contained Err value.
 
         This function can be used to unpack a successful result while handling
         an error.
 
         Basic usage:
-        >>> k = 21
 
+        >>> k = 21
+        >>>
         >>> x: Result[str, str] = Ok("foo")
         >>> x.map_or_else(lambda e: k * 2, lambda v: len(v))
         3
-
+        >>>
         >>> x: Result[str, str] = Err("foo")
         >>> x.map_or_else(lambda e: k * 2, lambda v: len(v))
         42
@@ -200,20 +206,21 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def map_err(self, op: Callable[[E], F]) -> "Result[T, F]":
-        """Maps a `Result[T, E]` to `Result[T, F]` by applying a function to a
-        contained Err value, leaving an Ok value untouched.
+        """Maps a ``Result[T, E]`` to ``Result[T, F]`` by applying a function to
+        a contained Err value, leaving an Ok value untouched.
 
         This function can be used to pass through a successful result while
         handling an error.
 
         Basic usage:
+
         >>> def stringify(x: int) -> str:
         ...     return f"error code: {x}"
         ...
         >>> x: Result[int, int] = Ok(2)
         >>> x.map_err(stringify)
         Ok(2)
-
+        >>>
         >>> x: Result[int, int] = Err(13)
         >>> x.map_err(stringify)
         Err('error code: 13')
@@ -226,10 +233,11 @@ class Result(Generic[T, E], ABC):
         The iterator yields one value if the reusult is Ok, otherwise none.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(7)
         >>> next(x.iter())
         7
-
+        >>>
         >>> x: Result[int, str] = Err("nothing!")
         >>> next(x.iter())
         Traceback (most recent call last):
@@ -243,10 +251,11 @@ class Result(Generic[T, E], ABC):
         The iterator yields one value if the reusult is Ok, otherwise none.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(7)
         >>> next(iter(x))
         7
-
+        >>>
         >>> x: Result[int, str] = Err("nothing!")
         >>> next(iter(x))
         Traceback (most recent call last):
@@ -257,25 +266,26 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def and_(self, res: "Result[U, E]") -> "Result[U, E]":
-        """Returns `res` if the result is Ok, otherwise returns the Err value
-        of `self`.
+        """Returns ``res`` if the result is Ok, otherwise returns the Err value
+        of ``self``.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(2)
         >>> y: Result[str, str] = Err("late error")
         >>> x.and_(y)
         Err('late error')
-
+        >>>
         >>> x: Result[int, str] = Err("early error")
         >>> y: Result[str, str] = Ok("foo")
         >>> x.and_(y)
         Err('early error')
-
+        >>>
         >>> x: Result[int, str] = Err("not a 2")
         >>> y: Result[str, str] = Err("late error")
         >>> x.and_(y)
         Err('not a 2')
-
+        >>>
         >>> x: Result[int, str] = Ok(2)
         >>> y: Result[str, str] = Ok("different result type")
         >>> x.and_(y)
@@ -284,12 +294,13 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def and_then(self, op: Callable[[T], "Result[U, E]"]) -> "Result[U, E]":
-        """Calls `op` if the result is Ok, otherwise returns the Err value of
-        `self`.
+        """Calls ``op`` if the result is Ok, otherwise returns the Err value of
+        ``self``.
 
-        This function can be used for control flow based on `Result` values.
+        This function can be used for control flow based on ``Result`` values.
 
         Basic usage:
+
         >>> def sq(x: int) -> Result[int, int]: return Ok(x * x)
         ...
         >>> def err(x: int) -> Result[int, int]: return Err(x)
@@ -306,29 +317,30 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def or_(self, res: "Result[T, F]") -> "Result[T, F]":
-        """Returns `res` if the result is Err, otherwise returns the Ok result
+        """Returns ``res`` if the result is Err, otherwise returns the Ok result
         of self.
 
         Arguments passed to or are eagerly evaluated; if you are passing the
-        result of a function call, it is recommended to use `or_else`, which is
-        lazily evaluated.
+        result of a function call, it is recommended to use ``or_else``, which
+        is lazily evaluated.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(2)
         >>> y: Result[int, str] = Err("late error")
         >>> x.or_(y)
         Ok(2)
-
+        >>>
         >>> x: Result[int, str] = Err("early error")
         >>> y: Result[int, str] = Ok(2)
         >>> x.or_(y)
         Ok(2)
-
+        >>>
         >>> x: Result[int, str] = Err("not a 2")
         >>> y: Result[int, str] = Err("late error")
         >>> x.or_(y)
         Err('late error')
-
+        >>>
         >>> x: Result[int, str] = Ok(2)
         >>> y: Result[int, str] = Ok(100)
         >>> x.or_(y)
@@ -337,12 +349,13 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def or_else(self, op: Callable[[E], "Result[T, F]"]) -> "Result[T, F]":
-        """Calls `op` if the result is Err, otherwise returns returns the Ok
+        """Calls ``op`` if the result is Err, otherwise returns returns the Ok
         value from self.
 
         This function can be used for control flow based on result values.
 
         Basic usage:
+
         >>> def sq(x: int) -> Result[int, int]: return Ok(x * x)
         ...
         >>> def err(x: int) -> Result[int, int]: return Err(x)
@@ -366,11 +379,12 @@ class Result(Generic[T, E], ABC):
         which is lazily evaluated.
 
         Basic usage:
+
         >>> default = 2
         >>> x: Result[int, str] = Ok(9)
         >>> x.unwrap_or(default)
         9
-
+        >>>
         >>> x: Result[int, str] = Err("error")
         >>> x.unwrap_or(default)
         2
@@ -381,6 +395,7 @@ class Result(Generic[T, E], ABC):
         """Returns the contained Ok value or computes it from a closure.
 
         Basic usage:
+
         >>> def count(x: str) -> int: return len(x)
         >>> Ok(2).unwrap_or_else(count)
         2
@@ -390,12 +405,13 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def expect(self, msg: str) -> T:
-        """Returns the contained Ok value, consuming the `self` value.
+        """Returns the contained Ok value, consuming the ``self`` value.
 
-        Raises an AssertionError if the value is an Err, with a message
-        including the passed message, and the content of the Err.
+        :raises AssertionError: Raised if the value is an Err, with a message
+            including the passed message and the content of the Err.
 
         Basic usage:
+
         >>> x: Result[int, str] = Err("emergency failure")
         >>> x.expect("Testing expect")
         Traceback (most recent call last):
@@ -405,21 +421,22 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def unwrap(self) -> T:
-        """Returns the contained Ok value, consuming the `self` value.
+        """Returns the contained Ok value, consuming the ``self`` value.
 
         Because this function may panic, its use is generally discouraged.
         Instead, prefer to use pattern matching and handle the Err case
-        explicitly, or call `unwrap_or`, `unwrap_or_else`, or
-        `unwrap_or_default`.
+        explicitly, or call ``unwrap_or``, ``unwrap_or_else``, or
+        ``unwrap_or_default``.
 
-        Raises AssertionError if the value is an Err, with a message provided by
-        the Err's value.
+        :raises AssertionError: Raised if the value is an Err, with a message
+            provided by the Err's value.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(2)
         >>> x.unwrap()
         2
-
+        >>>
         >>> x: Result[int, str] = Err("emergency failure")
         >>> x.unwrap()
         Traceback (most recent call last):
@@ -431,10 +448,11 @@ class Result(Generic[T, E], ABC):
     def expect_err(self, msg: str) -> E:
         """Returns the contained Err value.
 
-        Raises AssertionError if the value is an Ok, with a message including
-        the passed message, and the content of the Ok.
+        :raises AssertionError: Raised if the value is an Ok, with a message
+            including the passed message and the content of the Ok.
 
         Basic usage:
+
         >>> x: Result[int, str] = Ok(10)
         >>> x.expect_err("Testing expect_err")
         Traceback (most recent call last):
@@ -444,17 +462,17 @@ class Result(Generic[T, E], ABC):
 
     @abstractmethod
     def unwrap_err(self) -> E:
-        """Returns the contained Err value, consuming the `self` value.
+        """Returns the contained Err value, consuming the ``self`` value.
 
-        Raises AssertionError if the value is an Ok, with a custom panic message
-        provided by the Ok's value.
+        :raises AssertionError: Raised if the value is an Ok, with a custom
+            message provided by the Ok's value.
 
         >>> x: Result[int, str] = Ok(2)
         >>> x.unwrap_err()
         Traceback (most recent call last):
             ...
         AssertionError: 2
-
+        >>>
         >>> x: Result[int, str] = Err("emergency failure")
         >>> x.unwrap_err()
         'emergency failure'
