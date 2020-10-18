@@ -7,7 +7,15 @@ See the original Rust documentation here_.
 
 ----
 
+.. currentmodule:: result.result
+
+.. autosummary:: result.result
+   Result
+   Ok
+   Err
+
 .. automodule:: result.result
+   :members: Ok, Err
 
    The Result Type
    ---------------

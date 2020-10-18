@@ -1,14 +1,14 @@
 """Optional values.
 
-Type Option represents an optional value: every Option is either Some and
-contains a value, or None\\_, and does not. Option types are very common in Rust
-code, as they have a number of uses:
+Type Option represents an optional value: every Option is either
+:meth:`Option.Some` and contains a value, or :meth:`Option.None_`, and does not.
+Option types are very common in Rust code, as they have a number of uses:
 
 - Initial values
 - Return values for functions that are not defined over their entire input range
   (partial functions)
-- Return value for otherwise reporting simple errors, where None\\_ is returned on
-  error
+- Return value for otherwise reporting simple errors, where ``None_`` is
+  returned on error
 - Optional struct fields
 - Struct fields that can be loaned or "taken"
 - Optional function arguments
@@ -16,7 +16,7 @@ code, as they have a number of uses:
 - Swapping things out of difficult situations
 
 Options are commonly paired with pattern matching to query the presence of a
-value and take action, always accounting for the None\\_ case.
+value and take action, always accounting for the ``None_`` case.
 
 >>> def divide(numerator: float, denominator: float) -> Option[float]:
 ...     if denominator == 0.0:
@@ -35,7 +35,7 @@ Result: 0.6666666666666666
 Examples
 --------
 
-Basic pattern matching on Option:
+Basic pattern matching on :class:`Option`:
 
 >>> msg = Some("howdy")
 >>>
@@ -47,7 +47,7 @@ howdy
 >>> unwrapped_msg
 'howdy'
 
-Initialize a result to None\\_ before a loop:
+Initialize a result to ``None_`` before a loop:
 
 >>> from dataclasses import dataclass
 >>>
@@ -107,16 +107,21 @@ E = TypeVar("E")
 
 
 class Option(Generic[T]):
-    """The ``Option`` type. See the module-level documentation for more."""
+    """The ``Option`` type. See the :mod:`module-level documentation
+    <result.option>` for more."""
 
     __slots__ = ("_value",)
     _value: Union[Nothing, T]
 
     def __init__(self, value: Union[Nothing, T] = nothing):
+        """This constructor should not be called directly.
+
+        Instead, use :meth:`Some` or :meth:`None_`
+        """
         self._value = value
 
     def is_some(self) -> bool:
-        """Returns ``True`` if the option is a Some value.
+        """Returns :obj:`True` if the option is a ``Some`` value.
 
         >>> x: Option[int] = Some(2)
         >>> x.is_some()
@@ -128,7 +133,7 @@ class Option(Generic[T]):
         return self._value is not nothing
 
     def is_none(self) -> bool:
-        """Returns ``True`` if the option is a None\\_ value.
+        """Returns :obj:`True` if the option is a ``None_`` value.
 
         >>> x: Option[int] = Some(2)
         >>> x.is_none()
@@ -140,10 +145,10 @@ class Option(Generic[T]):
         return self._value is nothing
 
     def expect(self, msg: str) -> T:
-        """Returns the contained Some value.
+        """Returns the contained ``Some`` value.
 
-        :raises AssertionError: Raised if the value is a None\\_ with a custom
-            message provided by ``msg``.
+        :raises AssertionError: Raised if the value is a ``None_``, with a
+            custom message provided by ``msg``.
 
         >>> x = Some("value")
         >>> x.expect("fruits are healthy")
@@ -159,14 +164,13 @@ class Option(Generic[T]):
         return self._value
 
     def unwrap(self) -> T:
-        """Returns the contained Some value.
+        """Returns the contained ``Some`` value.
 
         Because this function may panic, its use is generally discouraged.
-        Instead, prefer to use pattern matching and handle the None\\_ case
-        explicitly, or call ``unwrap_or``, ``unwrap_or_else``, or
-        ``unwrap_or_default``.
+        Instead, prefer to use pattern matching and handle the ``None_`` case
+        explicitly, or call :meth:`unwrap_or` or :meth:`unwrap_or_else`.
 
-        :raises AssertionError: Raised if the self value is None\\_.
+        :raises AssertionError: Raised if the self value is ``None_``.
 
         >>> x = Some("air")
         >>> x.unwrap()
@@ -182,11 +186,11 @@ class Option(Generic[T]):
         return self._value
 
     def unwrap_or(self, default: T) -> T:
-        """Returns the contained Some value or a provided default.
+        """Returns the contained ``Some`` value or a provided default.
 
         Arguments passed to ``unwrap_or`` are eagerly evaluated; if you are
         passing the result of a function call, it is recommended to use
-        ``unwrap_or_else``, which is lazily evaluated.
+        :meth:`unwrap_or_else`, which is lazily evaluated.
 
         >>> Some("car").unwrap_or("bike")
         'car'
@@ -198,7 +202,7 @@ class Option(Generic[T]):
         return self._value
 
     def unwrap_or_else(self, f: Callable[[], T]) -> T:
-        """Returns the contained Some value or computes it from a closure.
+        """Returns the contained ``Some`` value or computes it from a closure.
 
         >>> k = 10
         >>> Some(4).unwrap_or_else(lambda: 2 * k)
@@ -214,7 +218,7 @@ class Option(Generic[T]):
         """Maps an ``Option[T]`` to ``Option[U]`` by applying a function to a
         contained value.
 
-        Converts an ``Option[str]`` into an ``Option[int]``:
+        Converting an ``Option[str]`` into an ``Option[int]``:
 
         >>> maybe_some_string = Some("Hello, World!")
         >>> maybe_some_len = maybe_some_string.map(len)
@@ -230,8 +234,8 @@ class Option(Generic[T]):
         provided default (if not).
 
         Arguments passed to ``map_or`` are eagerly evaluated; if you are passing
-        the result of a function call, it is recommended to use ``map_or_else``,
-        which is lazily evaluated.
+        the result of a function call, it is recommended to use
+        :meth:`map_or_else`, which is lazily evaluated.
 
         >>> x = Some("foo")
         >>> x.map_or(42, len)
@@ -262,12 +266,13 @@ class Option(Generic[T]):
         return f(self._value)
 
     def ok_or(self, err: E) -> "Result[T, E]":
-        """Transforms the ``Option[T]`` into a ``Result[T, E]``, mapping
-        ``Some(v)`` to ``Ok(v)`` and ``None_`` to ``Err(err)``.
+        """Transforms the ``Option[T]`` into a :class:`Result[T, E]
+        <result.result.Result>`, mapping ``Some(v)`` to ``Ok(v)`` and ``None_``
+        to ``Err(err)``.
 
         Arguments passed to ``ok_or`` are eagerly evaluated; if you are passing
-        the result of a function call, it is recommended to use ``ok_or_else``,
-        which is lazily evaluated.
+        the result of a function call, it is recommended to use
+        :meth:`ok_or_else`, which is lazily evaluated.
 
         >>> x = Some("foo")
         >>> x.ok_or(0)
@@ -281,8 +286,9 @@ class Option(Generic[T]):
         return Result.Ok(self._value)
 
     def ok_or_else(self, err: Callable[[], E]) -> "Result[T, E]":
-        """Transforms the ``Option[T]`` into a ``Result[T, E]``, mapping
-        ``Some(v)`` to ``Ok(v)`` and ``None_`` to ``Err(err())``.
+        """Transforms the ``Option[T]`` into a :class:`Result[T, E]
+        <result.result.Result>`, mapping ``Some(v)`` to ``Ok(v)`` and ``None_``
+        to ``Err(err())``.
 
         >>> x = Some("foo")
         >>> x.ok_or_else(lambda: 0)
@@ -402,8 +408,8 @@ class Option(Generic[T]):
         ``optb``.
 
         Arguments passed to ``or`` are eagerly evaluated; if you are passing the
-        result of a function call, it is recommended to use ``or_else``, which
-        is lazily evaluated.
+        result of a function call, it is recommended to use :meth:`or_else`,
+        which is lazily evaluated.
 
         >>> x = Some(2)
         >>> y: Option[int] = None_()
@@ -446,8 +452,8 @@ class Option(Generic[T]):
         return Some(self._value)
 
     def xor(self, optb: "Option[T]") -> "Option[T]":
-        """Returns Some if exactly one of ``self``, ``optb`` is Some, otherwise
-        returns ``None_``.
+        """Returns ``Some`` if exactly one of ``self``, ``optb`` is ``Some``,
+        otherwise returns ``None_``.
 
         >>> x = Some(2)
         >>> y: Option[int] = None_()
@@ -562,7 +568,7 @@ class Option(Generic[T]):
         return Some(old_value)
 
     def zip(self, other: "Option[U]") -> "Option[Tuple[T, U]]":
-        """Zips ``self`` with another ``Option``.
+        """Zips ``self`` with another :class:`Option`.
 
         If ``self`` is ``Some(s)`` and ``other`` is ``Some(o)``, this method
         returns ``Some((s, o))``. Otherwise, ``None_`` is returned.
@@ -586,10 +592,12 @@ class Option(Generic[T]):
 
     @classmethod
     def Some(cls, value: T) -> "Option[T]":
+        """Some value ``T``"""
         return cls(value)
 
     @classmethod
     def None_(cls) -> "Option[T]":
+        """No value"""
         return cls()
 
 

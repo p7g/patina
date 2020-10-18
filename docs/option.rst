@@ -7,7 +7,15 @@ See the original Rust documentation here_.
 
 ----
 
+.. currentmodule:: result.option
+
+.. autosummary:: result.option
+   Option
+   Some
+   None_
+
 .. automodule:: result.option
+   :members: Some, None_
 
    The Option Type
    ---------------

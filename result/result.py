@@ -1,13 +1,14 @@
 """Error handling with the Result type.
 
-``Result[T, E]`` is the type used for returning and propagating errors. It is an
-enum with the variants, ``Ok(T)``, representing success and containing a value,
-and ``Err(E)``, representing error and containing an error value.
+:class:`Result[T, E] <Result>` is the type used for returning and propagating
+errors. It is an enum with the variants, :meth:`Ok(T) <Ok>`, representing
+success and containing a value, and :meth:`Err(E) <Err>`, representing error and
+containing an error value.
 
 Examples
 --------
 
-A simple function returning Result might be defined and used like so:
+A simple function returning :class:`Result` might be defined and used like so:
 
 >>> from enum import auto, Enum
 >>>
@@ -33,9 +34,9 @@ A simple function returning Result might be defined and used like so:
 ...
 working with version: Version.version_1
 
-Pattern matching on ``Result``\\s is clear and straightforward for simple cases
-(in Rust), but ``Result`` comes with some convenience methods that make working
-with it more succinct.
+Pattern matching on :class:`Result`\\s is clear and straightforward for simple
+cases (in Rust), but ``Result`` comes with some convenience methods that make
+working with it more succinct.
 
 >>> good_result: Result[int, int] = Ok(10)
 >>> bad_result: Result[int, int] = Err(10)
@@ -89,7 +90,9 @@ def _result_value_attr(r: "Result[T, E]") -> str:
 
 @dependent_ord(_result_value_attr)
 class Result(Generic[T, E]):
-    """Result is a type that represents either success (Ok) or failure (Err)."""
+    """``Result`` is a type that represents either success (:meth:`Ok`) or
+    failure (:meth:`Err`).
+    """
 
     __slots__ = ("_state", "_left", "_right")
     _state: _ResultState
@@ -102,6 +105,10 @@ class Result(Generic[T, E]):
         left: Union[Nothing, E] = nothing,
         right: Union[Nothing, T] = nothing,
     ):
+        """This constructor should not be called directly.
+
+        Instead, use :meth:`Ok` or :meth:`Err`.
+        """
         if left is nothing and right is not nothing:
             self._state = _ResultState.ok
             self._right = right
@@ -115,7 +122,7 @@ class Result(Generic[T, E]):
             )
 
     def is_ok(self) -> bool:
-        """Returns ``True`` if the result is Ok.
+        """Returns :obj:`True` if the result is :meth:`Ok`.
 
         Basic usage:
 
@@ -130,7 +137,7 @@ class Result(Generic[T, E]):
         return self._state is _ResultState.ok
 
     def is_err(self) -> bool:
-        """Returns ``True`` if the result is Err.
+        """Returns :obj:`True` if the result is :meth:`Err`.
 
         Basic usage:
 
@@ -145,8 +152,10 @@ class Result(Generic[T, E]):
         return self._state is _ResultState.err
 
     def ok(self) -> Option[T]:
-        """Converts from ``Result[T, E]`` to ``Option[T]``.
-        Converts ``self`` into Option[T], discarding the error, if any.
+        """Converts from ``Result[T, E]`` to :class:`Option[T]
+        <result.option.Option>`.
+
+        Converts ``self`` into ``Option[T]``, discarding the error, if any.
 
         Basic usage:
 
@@ -163,8 +172,11 @@ class Result(Generic[T, E]):
         return Option.Some(self._right)
 
     def err(self) -> Option[E]:
-        """Converts from ``Result[T, E]`` to ``Option[E]``.
-        Converts ``self`` into Option[E], discarding the success value, if any.
+        """Converts from ``Result[T, E]`` to :class:`Option[E]
+        <result.option.Option>`.
+
+        Converts ``self`` into ``Option[E]``, discarding the success value, if
+        any.
 
         Basic usage:
 
@@ -182,11 +194,11 @@ class Result(Generic[T, E]):
 
     def map(self, op: Callable[[T], U]) -> "Result[U, E]":
         """Maps a ``Result[T, E]`` to ``Result[U, E]`` by applying a function to
-        a contained Ok value, leaving an Err value untouched.
+        a contained :meth:`Ok` value, leaving an :meth:`Err` value untouched.
 
         This function can be used to compose the results of two functions.
 
-        Print the numbers on each line of a string multiplied by two.
+        Printing the numbers on each line of a string multiplied by two:
 
         >>> def try_parse(s: str) -> Result[int, ValueError]:
         ...     try:
@@ -210,12 +222,12 @@ class Result(Generic[T, E]):
         return Ok(op(self._right))
 
     def map_or(self, default: U, f: Callable[[T], U]) -> U:
-        """Applies a function to the contained value (if Ok), or returns the
-        provided default (if Err).
+        """Applies a function to the contained value (if :meth:`Ok`), or returns
+        the provided default (if :meth:`Err`).
 
         Arguments passed to ``map_or`` are eagerly evaluated; if you are passing
-        the result of a function call, it is recommended to use ``map_or_else``,
-        which is lazily evaluated.
+        the result of a function call, it is recommended to use
+        :meth:`map_or_else`, which is lazily evaluated.
 
         >>> x: Result[str, str] = Ok("foo")
         >>> x.map_or(42, lambda v: len(v))
@@ -231,7 +243,8 @@ class Result(Generic[T, E]):
 
     def map_or_else(self, default: Callable[[E], U], f: Callable[[T], U]) -> U:
         """Maps a ``Result[T, E]`` to ``U`` by applying a function to a
-        contained Ok value, or a fallback function to a contained Err value.
+        contained :meth:`Ok` value, or a fallback function to a contained
+        :meth:`Err` value.
 
         This function can be used to unpack a successful result while handling
         an error.
@@ -254,7 +267,7 @@ class Result(Generic[T, E]):
 
     def map_err(self, op: Callable[[E], F]) -> "Result[T, F]":
         """Maps a ``Result[T, E]`` to ``Result[T, F]`` by applying a function to
-        a contained Err value, leaving an Ok value untouched.
+        a contained :meth:`Err` value, leaving an :meth:`Ok` value untouched.
 
         This function can be used to pass through a successful result while
         handling an error.
@@ -279,7 +292,8 @@ class Result(Generic[T, E]):
     def iter(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
 
-        The iterator yields one value if the reusult is Ok, otherwise none.
+        The iterator yields one value if the reusult is :meth:`Ok`, otherwise
+        none.
 
         Basic usage:
 
@@ -299,7 +313,8 @@ class Result(Generic[T, E]):
     def __iter__(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
 
-        The iterator yields one value if the reusult is Ok, otherwise none.
+        The iterator yields one value if the reusult is :meth:`Ok`, otherwise
+        none.
 
         Basic usage:
 
@@ -316,8 +331,8 @@ class Result(Generic[T, E]):
         return self.iter()
 
     def and_(self, res: "Result[U, E]") -> "Result[U, E]":
-        """Returns ``res`` if the result is Ok, otherwise returns the Err value
-        of ``self``.
+        """Returns ``res`` if the result is :meth:`Ok`, otherwise returns the
+        :meth:`Err` value of ``self``.
 
         Basic usage:
 
@@ -346,10 +361,11 @@ class Result(Generic[T, E]):
         return Err(self._left)
 
     def and_then(self, op: Callable[[T], "Result[U, E]"]) -> "Result[U, E]":
-        """Calls ``op`` if the result is Ok, otherwise returns the Err value of
-        ``self``.
+        """Calls ``op`` if the result is :meth:`Ok`, otherwise returns the
+        :meth:`Err` value of ``self``.
 
-        This function can be used for control flow based on ``Result`` values.
+        This function can be used for control flow based on :class:`Result`
+        values.
 
         Basic usage:
 
@@ -371,12 +387,12 @@ class Result(Generic[T, E]):
         return op(self._right)
 
     def or_(self, res: "Result[T, F]") -> "Result[T, F]":
-        """Returns ``res`` if the result is Err, otherwise returns the Ok result
-        of self.
+        """Returns ``res`` if the result is :meth:`Err`, otherwise returns the
+        :meth:`Ok` result of self.
 
         Arguments passed to or are eagerly evaluated; if you are passing the
-        result of a function call, it is recommended to use ``or_else``, which
-        is lazily evaluated.
+        result of a function call, it is recommended to use :meth:`or_else`,
+        which is lazily evaluated.
 
         Basic usage:
 
@@ -405,8 +421,8 @@ class Result(Generic[T, E]):
         return res
 
     def or_else(self, op: Callable[[E], "Result[T, F]"]) -> "Result[T, F]":
-        """Calls ``op`` if the result is Err, otherwise returns returns the Ok
-        value from self.
+        """Calls ``op`` if the result is :meth:`Err`, otherwise returns returns
+        the :meth:`Ok` value from self.
 
         This function can be used for control flow based on result values.
 
@@ -430,11 +446,11 @@ class Result(Generic[T, E]):
         return op(self._left)
 
     def unwrap_or(self, default: T) -> T:
-        """Returns the contained Ok value or a provided default.
+        """Returns the contained :meth:`Ok` value or a provided default.
 
         Arguments passed to unwrap_or are eagerly evaluated; if you are passing
-        the result of a function call, it is recommended to use unwrap_or_else,
-        which is lazily evaluated.
+        the result of a function call, it is recommended to use
+        :meth:`unwrap_or_else`, which is lazily evaluated.
 
         Basic usage:
 
@@ -452,7 +468,7 @@ class Result(Generic[T, E]):
         return self._right
 
     def unwrap_or_else(self, op: Callable[[E], T]) -> T:
-        """Returns the contained Ok value or computes it from a closure.
+        """Returns the contained :meth:`Ok` value or computes it from a closure.
 
         Basic usage:
 
@@ -468,10 +484,10 @@ class Result(Generic[T, E]):
         return self._right
 
     def expect(self, msg: str) -> T:
-        """Returns the contained Ok value, consuming the ``self`` value.
+        """Returns the contained :meth:`Ok` value.
 
-        :raises AssertionError: Raised if the value is an Err, with a message
-            including the passed message and the content of the Err.
+        :raises AssertionError: Raised if the value is an :meth:`Err`, with a
+            message including the passed message and the content of the ``Err``.
 
         Basic usage:
 
@@ -486,15 +502,14 @@ class Result(Generic[T, E]):
         return self._right
 
     def unwrap(self) -> T:
-        """Returns the contained Ok value, consuming the ``self`` value.
+        """Returns the contained :meth:`Ok` value, consuming the ``self`` value.
 
         Because this function may panic, its use is generally discouraged.
         Instead, prefer to use pattern matching and handle the Err case
-        explicitly, or call ``unwrap_or``, ``unwrap_or_else``, or
-        ``unwrap_or_default``.
+        explicitly, or call :meth:`unwrap_or` or :meth:`unwrap_or_else`.
 
-        :raises AssertionError: Raised if the value is an Err, with a message
-            provided by the Err's value.
+        :raises AssertionError: Raised if the value is an :meth:`Err`, with a
+            message provided by the ``Err``\\'s value.
 
         Basic usage:
 
@@ -513,10 +528,10 @@ class Result(Generic[T, E]):
         return self._right
 
     def expect_err(self, msg: str) -> E:
-        """Returns the contained Err value.
+        """Returns the contained :meth:`Err` value.
 
-        :raises AssertionError: Raised if the value is an Ok, with a message
-            including the passed message and the content of the Ok.
+        :raises AssertionError: Raised if the value is an :meth:`Ok`, with a
+            message including the passed message and the content of the ``Ok``.
 
         Basic usage:
 
@@ -531,10 +546,10 @@ class Result(Generic[T, E]):
         return self._left
 
     def unwrap_err(self) -> E:
-        """Returns the contained Err value, consuming the ``self`` value.
+        """Returns the contained :meth:`Err` value.
 
-        :raises AssertionError: Raised if the value is an Ok, with a custom
-            message provided by the Ok's value.
+        :raises AssertionError: Raised if the value is an :meth:`Ok`, with a
+            custom message provided by the ``Ok``\\'s value.
 
         >>> x: Result[int, str] = Ok(2)
         >>> x.unwrap_err()
@@ -559,10 +574,12 @@ class Result(Generic[T, E]):
 
     @classmethod
     def Ok(cls, value: T) -> "Result[T, E]":
+        """Contains the success value"""
         return cls(right=value)
 
     @classmethod
     def Err(cls, error: E) -> "Result[T, E]":
+        """Contains the error value"""
         return cls(left=error)
 
 
