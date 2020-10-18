@@ -96,13 +96,23 @@ from typing import (
 )
 
 from .ref import Ref
-from ._utils import _nothing, _Nothing
+from ._utils import _nothing, _Nothing, FakeGeneric
 
 __all__ = ("Option", "Some", "None_")
 
 T = TypeVar("T")
 U = TypeVar("U")
 E = TypeVar("E")
+
+
+class _NoneFactory(FakeGeneric):
+    def __call__(self) -> "Option[T]":
+        return Option()
+
+
+class _SomeFactory(FakeGeneric):
+    def __call__(self, value: T) -> "Option[T]":
+        return Option(value)
 
 
 class Option(Generic[T]):
@@ -583,15 +593,8 @@ class Option(Generic[T]):
             return "None_"
         return f"Some({repr(self._value)})"
 
-    @classmethod
-    def Some(cls, value: T) -> "Option[T]":
-        """Some value ``T``."""
-        return cls(value)
-
-    @classmethod
-    def None_(cls) -> "Option[T]":
-        """No value."""
-        return cls()
+    Some = _SomeFactory()
+    None_ = _NoneFactory()
 
 
 Some = Option.Some

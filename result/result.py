@@ -64,7 +64,7 @@ from typing import Callable, Generic, Iterator, TypeVar, Union
 from typing_extensions import final
 
 from .option import Option
-from ._utils import dependent_hash, dependent_ord, _nothing, _Nothing
+from ._utils import dependent_hash, dependent_ord, _nothing, _Nothing, FakeGeneric
 
 __all__ = ("Result", "Ok", "Err")
 
@@ -74,17 +74,12 @@ U = TypeVar("U")
 F = TypeVar("F")
 
 
-class _ResultFactory(Generic[T, U, E]):
-    def __getitem__(self, *args, **kwargs):
-        return self
-
-
-class _OkFactory(_ResultFactory):
+class _OkFactory(FakeGeneric):
     def __call__(self, value: T) -> "Result[T, E]":
         return Result(right=value)
 
 
-class _ErrFactory(_ResultFactory):
+class _ErrFactory(FakeGeneric):
     def __call__(self, error: E) -> "Result[T, E]":
         return Result(left=error)
 

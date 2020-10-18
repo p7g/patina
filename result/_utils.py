@@ -51,3 +51,8 @@ class _Nothing(enum.Enum):
 
 
 _nothing: Final = _Nothing.nothing
+
+
+class FakeGeneric:
+    def __getitem__(self, *args, **kwargs):
+        return self
