@@ -12,7 +12,7 @@ def dependent_hash(attr_name: str) -> Callable:
             return None
 
         def __hash__():
-            return hash(value)
+            return hash((type(self), value))
 
         return __hash__
 

@@ -12,6 +12,10 @@ class Some(Option[T]):
     def __init__(self, value: T):
         self.value = value
 
+    def __repr__(self):
+        return f"Some({repr(self.value)})"
+
 
 class None_(Option[T]):
-    pass
+    def __repr__(self):
+        return "None_"
