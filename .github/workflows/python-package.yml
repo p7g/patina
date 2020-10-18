@@ -25,15 +25,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install poetry
         poetry install
-    - uses: ricardochaves/python-lint@v1.3.0
-      with:
-        python-root-list: "result"
-        use-pylint: false
-        use-pycodestyle: false
-        use-flake8: true
-        use-black: true
-        use-mypy: true
-        use-isort: false
+    - name: Lint Python
+      run: |
+        poetry run flake8 result
+        poetry run mypy result
+        poetry run black --check result
     - name: Run doctests
       run: |
         poetry run ./run-doctests -v
