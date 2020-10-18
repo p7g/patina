@@ -1,6 +1,27 @@
 #!/usr/bin/env python3
 
-import doctest, importlib, pkgutil
+import doctest, importlib, mypy.api, pkgutil, sys
 
-for module in pkgutil.walk_packages(["result"], prefix="result."):
-    doctest.testmod(importlib.import_module(module.name), raise_on_error=True)
+finder = doctest.DocTestFinder()
+
+for module_info in pkgutil.walk_packages(["result"], prefix="result."):
+    if 'option' in module_info.name:
+        continue
+    module = importlib.import_module(module_info.name)
+    failure_count, _test_count = doctest.testmod(module)
+
+    if failure_count > 0:
+        exit(1)
+
+    for test in finder.find(module, module=module):
+        src = f"from {module_info.name} import *\n" + "".join(
+            [e.source for e in test.examples]
+        )
+        stdout, stderr, result = mypy.api.run(["-c", src])
+        if result != 0:
+            print(
+                f"Type check failed for {test.name} in {test.filename}", file=sys.stderr
+            )
+            print(stdout, file=sys.stdout)
+            print(stderr, file=sys.stderr)
+            exit(result)
