@@ -36,4 +36,4 @@ jobs:
         use-isort: false
     - name: Run doctests
       run: |
-        ./run-doctests -v
+        poetry run ./run-doctests -v
