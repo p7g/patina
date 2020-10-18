@@ -86,14 +86,11 @@ Initialize a result to None\\_ before a loop:
 the biggest animal is blue whale
 """
 
-import enum
 from typing import (
-    cast,
     Callable,
     Generic,
     Iterator,
     Tuple,
-    Type,
     TypeVar,
     Union,
 )
@@ -279,8 +276,8 @@ class Option(Generic[T]):
         Err(0)
         """
         if self._value is _nothing:
-            return Err(err)
-        return Ok(self._value)
+            return Result.Err(err)
+        return Result.Ok(self._value)
 
     def ok_or_else(self, err: Callable[[], E]) -> "Result[T, E]":
         """Transforms the ``Option[T]`` into a ``Result[T, E]``, mapping
@@ -294,8 +291,8 @@ class Option(Generic[T]):
         Err(0)
         """
         if self._value is _nothing:
-            return Err(err())
-        return Ok(self._value)
+            return Result.Err(err())
+        return Result.Ok(self._value)
 
     def iter(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
@@ -600,4 +597,4 @@ class Option(Generic[T]):
 Some = Option.Some
 None_ = Option.None_
 
-from .result import Result, Ok, Err
+from .result import Result  # noqa E402

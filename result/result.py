@@ -60,10 +60,10 @@ True
 """
 
 import enum
-from typing import Any, cast, Callable, Generic, Iterator, Type, TypeVar, Union
+from typing import Callable, Generic, Iterator, TypeVar, Union
 from typing_extensions import final
 
-from .option import Option, Some, None_
+from .option import Option
 from ._utils import dependent_hash, dependent_ord, _nothing, _Nothing
 
 __all__ = ("Result", "Ok", "Err")
@@ -122,7 +122,8 @@ class Result(Generic[T, E]):
             self._left = left
         else:
             raise AssertionError(
-                "One and only one of `left` and `right` must be supplied to Result.__init__"
+                "One and only one of `left` and `right` must be supplied to "
+                "Result.__init__"
             )
 
     def is_ok(self) -> bool:
