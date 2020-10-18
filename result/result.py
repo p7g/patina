@@ -17,13 +17,13 @@ A simple function returning Result might be defined and used like so:
 ...
 >>> def parse_version(header: bytes) -> Result[Version, str]:
 ...     if len(header) == 0:
-...         return Err("invalid header length")
+...         return Result.Err("invalid header length")
 ...     elif header[0] == 1:
-...         return Ok(Version.version_1)
+...         return Result.Ok(Version.version_1)
 ...     elif header[0] == 2:
-...         return Ok(Version.version_2)
+...         return Result.Ok(Version.version_2)
 ...     else:
-...         return Err("invalid version")
+...         return Result.Err("invalid version")
 ...
 >>> version = parse_version(bytes([1, 2, 3, 4]))
 >>> if version.is_ok():
@@ -37,8 +37,8 @@ Pattern matching on ``Result``\\s is clear and straightforward for simple cases
 (in Rust), but ``Result`` comes with some convenience methods that make working
 with it more succinct.
 
->>> good_result: Result[int, int] = Ok(10)
->>> bad_result: Result[int, int] = Err(10)
+>>> good_result: Result[int, int] = Result.Ok(10)
+>>> bad_result: Result[int, int] = Result.Err(10)
 >>>
 >>> # The `is_ok` and `is_err` methods do what they say.
 >>> good_result.is_ok() and not good_result.is_err()
@@ -51,10 +51,10 @@ True
 >>> bad_result: Result[int, int] = bad_result.map(lambda i: i - 1)
 >>>
 >>> # Use `and_then` to continue their computation.
->>> good_result: Result[bool, int] = good_result.and_then(lambda i: Ok(i == 11))
+>>> good_result: Result[bool, int] = good_result.and_then(lambda i: Result.Ok(i == 11))
 >>>
 >>> # Use `or_else` to handle the error.
->>> bad_result: Result[int, int] = bad_result.or_else(lambda i: Ok(i + 20))
+>>> bad_result: Result[int, int] = bad_result.or_else(lambda i: Result.Ok(i + 20))
 >>>
 >>> # Consume the result and return the contents with `unwrap`.
 >>> final_awesome_result = good_result.unwrap()
@@ -67,7 +67,7 @@ from typing import Callable, Generic, Iterator, TypeVar, Union
 from typing_extensions import final
 
 from .option import Option
-from ._utils import dependent_hash, dependent_ord, _nothing, _Nothing, FakeGeneric
+from ._utils import dependent_hash, dependent_ord, nothing, Nothing
 
 __all__ = ("Result", "Ok", "Err")
 
@@ -75,16 +75,6 @@ T = TypeVar("T")
 E = TypeVar("E")
 U = TypeVar("U")
 F = TypeVar("F")
-
-
-class _OkFactory(FakeGeneric):
-    def __call__(self, value: T) -> "Result[T, E]":
-        return Result(right=value)
-
-
-class _ErrFactory(FakeGeneric):
-    def __call__(self, error: E) -> "Result[T, E]":
-        return Result(left=error)
 
 
 @final
@@ -109,13 +99,13 @@ class Result(Generic[T, E]):
     def __init__(
         self,
         *,
-        left: Union[_Nothing, E] = _nothing,
-        right: Union[_Nothing, T] = _nothing,
+        left: Union[Nothing, E] = nothing,
+        right: Union[Nothing, T] = nothing,
     ):
-        if left is _nothing and right is not _nothing:
+        if left is nothing and right is not nothing:
             self._state = _ResultState.ok
             self._right = right
-        elif left is not _nothing and right is _nothing:
+        elif left is not nothing and right is nothing:
             self._state = _ResultState.err
             self._left = left
         else:
@@ -129,11 +119,11 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(-3)
+        >>> x: Result[int, str] = Result.Ok(-3)
         >>> x.is_ok()
         True
         >>>
-        >>> x: Result[int, str] = Err("Some error message")
+        >>> x: Result[int, str] = Result.Err("Some error message")
         >>> x.is_ok()
         False
         """
@@ -144,11 +134,11 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(-3)
+        >>> x: Result[int, str] = Result.Ok(-3)
         >>> x.is_err()
         False
         >>>
-        >>> x: Result[int, str] = Err("Some error message")
+        >>> x: Result[int, str] = Result.Err("Some error message")
         >>> x.is_err()
         True
         """
@@ -160,11 +150,11 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(2)
+        >>> x: Result[int, str] = Result.Ok(2)
         >>> x.ok()
         Some(2)
         >>>
-        >>> x: Result[int, str] = Err("Nothing here")
+        >>> x: Result[int, str] = Result.Err("Nothing here")
         >>> x.ok()
         None_
         """
@@ -178,11 +168,11 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(2)
+        >>> x: Result[int, str] = Result.Ok(2)
         >>> x.err()
         None_
         >>>
-        >>> x: Result[int, str] = Err("Nothing here")
+        >>> x: Result[int, str] = Result.Err("Nothing here")
         >>> x.err()
         Some('Nothing here')
         """
@@ -200,9 +190,9 @@ class Result(Generic[T, E]):
 
         >>> def try_parse(s: str) -> Result[int, ValueError]:
         ...     try:
-        ...         return Ok(int(s))
+        ...         return Result.Ok(int(s))
         ...     except ValueError as e:
-        ...         return Err(e)
+        ...         return Result.Err(e)
         ...
         >>> line = "1\\n2\\n3\\n4\\n5\\n"
         >>> for num in line.splitlines():
@@ -216,8 +206,8 @@ class Result(Generic[T, E]):
         10
         """
         if self._state is _ResultState.err:
-            return Err(self._left)
-        return Ok(op(self._right))
+            return Result.Err(self._left)
+        return Result.Ok(op(self._right))
 
     def map_or(self, default: U, f: Callable[[T], U]) -> U:
         """Applies a function to the contained value (if Ok), or returns the
@@ -227,11 +217,11 @@ class Result(Generic[T, E]):
         the result of a function call, it is recommended to use ``map_or_else``,
         which is lazily evaluated.
 
-        >>> x: Result[str, str] = Ok("foo")
+        >>> x: Result[str, str] = Result.Ok("foo")
         >>> x.map_or(42, lambda v: len(v))
         3
         >>>
-        >>> x: Result[str, str] = Err("bar")
+        >>> x: Result[str, str] = Result.Err("bar")
         >>> x.map_or(42, lambda v: len(v))
         42
         """
@@ -250,11 +240,11 @@ class Result(Generic[T, E]):
 
         >>> k = 21
         >>>
-        >>> x: Result[str, str] = Ok("foo")
+        >>> x: Result[str, str] = Result.Ok("foo")
         >>> x.map_or_else(lambda e: k * 2, lambda v: len(v))
         3
         >>>
-        >>> x: Result[str, str] = Err("foo")
+        >>> x: Result[str, str] = Result.Err("foo")
         >>> x.map_or_else(lambda e: k * 2, lambda v: len(v))
         42
         """
@@ -274,17 +264,17 @@ class Result(Generic[T, E]):
         >>> def stringify(x: int) -> str:
         ...     return f"error code: {x}"
         ...
-        >>> x: Result[int, int] = Ok(2)
+        >>> x: Result[int, int] = Result.Ok(2)
         >>> x.map_err(stringify)
         Ok(2)
         >>>
-        >>> x: Result[int, int] = Err(13)
+        >>> x: Result[int, int] = Result.Err(13)
         >>> x.map_err(stringify)
         Err('error code: 13')
         """
         if self._state is _ResultState.ok:
-            return Ok(self._right)
-        return Err(op(self._left))
+            return Result.Ok(self._right)
+        return Result.Err(op(self._left))
 
     def iter(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
@@ -293,11 +283,11 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(7)
+        >>> x: Result[int, str] = Result.Ok(7)
         >>> next(x.iter())
         7
         >>>
-        >>> x: Result[int, str] = Err("nothing!")
+        >>> x: Result[int, str] = Result.Err("nothing!")
         >>> next(x.iter())
         Traceback (most recent call last):
             ...
@@ -313,11 +303,11 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(7)
+        >>> x: Result[int, str] = Result.Ok(7)
         >>> next(iter(x))
         7
         >>>
-        >>> x: Result[int, str] = Err("nothing!")
+        >>> x: Result[int, str] = Result.Err("nothing!")
         >>> next(iter(x))
         Traceback (most recent call last):
             ...
@@ -331,29 +321,29 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(2)
-        >>> y: Result[str, str] = Err("late error")
+        >>> x: Result[int, str] = Result.Ok(2)
+        >>> y: Result[str, str] = Result.Err("late error")
         >>> x.and_(y)
         Err('late error')
         >>>
-        >>> x: Result[int, str] = Err("early error")
-        >>> y: Result[str, str] = Ok("foo")
+        >>> x: Result[int, str] = Result.Err("early error")
+        >>> y: Result[str, str] = Result.Ok("foo")
         >>> x.and_(y)
         Err('early error')
         >>>
-        >>> x: Result[int, str] = Err("not a 2")
-        >>> y: Result[str, str] = Err("late error")
+        >>> x: Result[int, str] = Result.Err("not a 2")
+        >>> y: Result[str, str] = Result.Err("late error")
         >>> x.and_(y)
         Err('not a 2')
         >>>
-        >>> x: Result[int, str] = Ok(2)
-        >>> y: Result[str, str] = Ok("different result type")
+        >>> x: Result[int, str] = Result.Ok(2)
+        >>> y: Result[str, str] = Result.Ok("different result type")
         >>> x.and_(y)
         Ok('different result type')
         """
         if self._state is _ResultState.ok:
             return res
-        return Err(self._left)
+        return Result.Err(self._left)
 
     def and_then(self, op: Callable[[T], "Result[U, E]"]) -> "Result[U, E]":
         """Calls ``op`` if the result is Ok, otherwise returns the Err value of
@@ -363,21 +353,21 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> def sq(x: int) -> Result[int, int]: return Ok(x * x)
+        >>> def sq(x: int) -> Result[int, int]: return Result.Ok(x * x)
         ...
-        >>> def err(x: int) -> Result[int, int]: return Err(x)
+        >>> def err(x: int) -> Result[int, int]: return Result.Err(x)
         ...
-        >>> Ok[int, int](2).and_then(sq).and_then(sq)
+        >>> Result[int, int].Ok(2).and_then(sq).and_then(sq)
         Ok(16)
-        >>> Ok[int, int](2).and_then(sq).and_then(err)
+        >>> Result[int, int].Ok(2).and_then(sq).and_then(err)
         Err(4)
-        >>> Ok[int, int](2).and_then(err).and_then(sq)
+        >>> Result[int, int].Ok(2).and_then(err).and_then(sq)
         Err(2)
-        >>> Err(3).and_then(sq).and_then(sq)
+        >>> Result.Err(3).and_then(sq).and_then(sq)
         Err(3)
         """
         if self._state is _ResultState.err:
-            return Err(self._left)
+            return Result.Err(self._left)
         return op(self._right)
 
     def or_(self, res: "Result[T, F]") -> "Result[T, F]":
@@ -390,28 +380,28 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(2)
-        >>> y: Result[int, str] = Err("late error")
+        >>> x: Result[int, str] = Result.Ok(2)
+        >>> y: Result[int, str] = Result.Err("late error")
         >>> x.or_(y)
         Ok(2)
         >>>
-        >>> x: Result[int, str] = Err("early error")
-        >>> y: Result[int, str] = Ok(2)
+        >>> x: Result[int, str] = Result.Err("early error")
+        >>> y: Result[int, str] = Result.Ok(2)
         >>> x.or_(y)
         Ok(2)
         >>>
-        >>> x: Result[int, str] = Err("not a 2")
-        >>> y: Result[int, str] = Err("late error")
+        >>> x: Result[int, str] = Result.Err("not a 2")
+        >>> y: Result[int, str] = Result.Err("late error")
         >>> x.or_(y)
         Err('late error')
         >>>
-        >>> x: Result[int, str] = Ok(2)
-        >>> y: Result[int, str] = Ok(100)
+        >>> x: Result[int, str] = Result.Ok(2)
+        >>> y: Result[int, str] = Result.Ok(100)
         >>> x.or_(y)
         Ok(2)
         """
         if self._state is _ResultState.ok:
-            return Ok(self._right)
+            return Result.Ok(self._right)
         return res
 
     def or_else(self, op: Callable[[E], "Result[T, F]"]) -> "Result[T, F]":
@@ -422,21 +412,21 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> def sq(x: int) -> Result[int, int]: return Ok(x * x)
+        >>> def sq(x: int) -> Result[int, int]: return Result.Ok(x * x)
         ...
-        >>> def err(x: int) -> Result[int, int]: return Err(x)
+        >>> def err(x: int) -> Result[int, int]: return Result.Err(x)
         ...
-        >>> Ok[int, int](2).or_else(sq).or_else(sq)
+        >>> Result[int, int].Ok(2).or_else(sq).or_else(sq)
         Ok(2)
-        >>> Ok[int, int](2).or_else(err).or_else(sq)
+        >>> Result[int, int].Ok(2).or_else(err).or_else(sq)
         Ok(2)
-        >>> Err[int, int](3).or_else(sq).or_else(err)
+        >>> Result[int, int].Err(3).or_else(sq).or_else(err)
         Ok(9)
-        >>> Err[int, int](3).or_else(err).or_else(err)
+        >>> Result[int, int].Err(3).or_else(err).or_else(err)
         Err(3)
         """
         if self._state is _ResultState.ok:
-            return Ok(self._right)
+            return Result.Ok(self._right)
         return op(self._left)
 
     def unwrap_or(self, default: T) -> T:
@@ -449,11 +439,11 @@ class Result(Generic[T, E]):
         Basic usage:
 
         >>> default = 2
-        >>> x: Result[int, str] = Ok(9)
+        >>> x: Result[int, str] = Result.Ok(9)
         >>> x.unwrap_or(default)
         9
         >>>
-        >>> x: Result[int, str] = Err("error")
+        >>> x: Result[int, str] = Result.Err("error")
         >>> x.unwrap_or(default)
         2
         """
@@ -468,9 +458,9 @@ class Result(Generic[T, E]):
 
         >>> def count(x: str) -> int: return len(x)
         ...
-        >>> Ok(2).unwrap_or_else(count)
+        >>> Result.Ok(2).unwrap_or_else(count)
         2
-        >>> Err[int, str]("foo").unwrap_or_else(count)
+        >>> Result[int, str].Err("foo").unwrap_or_else(count)
         3
         """
         if self._state is _ResultState.err:
@@ -485,7 +475,7 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Err("emergency failure")
+        >>> x: Result[int, str] = Result.Err("emergency failure")
         >>> x.expect("Testing expect")
         Traceback (most recent call last):
             ...
@@ -508,11 +498,11 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(2)
+        >>> x: Result[int, str] = Result.Ok(2)
         >>> x.unwrap()
         2
         >>>
-        >>> x: Result[int, str] = Err("emergency failure")
+        >>> x: Result[int, str] = Result.Err("emergency failure")
         >>> x.unwrap()
         Traceback (most recent call last):
             ...
@@ -530,7 +520,7 @@ class Result(Generic[T, E]):
 
         Basic usage:
 
-        >>> x: Result[int, str] = Ok(10)
+        >>> x: Result[int, str] = Result.Ok(10)
         >>> x.expect_err("Testing expect_err")
         Traceback (most recent call last):
             ...
@@ -546,13 +536,13 @@ class Result(Generic[T, E]):
         :raises AssertionError: Raised if the value is an Ok, with a custom
             message provided by the Ok's value.
 
-        >>> x: Result[int, str] = Ok(2)
+        >>> x: Result[int, str] = Result.Ok(2)
         >>> x.unwrap_err()
         Traceback (most recent call last):
             ...
         AssertionError: 2
         >>>
-        >>> x: Result[int, str] = Err("emergency failure")
+        >>> x: Result[int, str] = Result.Err("emergency failure")
         >>> x.unwrap_err()
         'emergency failure'
         """
@@ -567,8 +557,13 @@ class Result(Generic[T, E]):
             return f"Ok({repr(self._right)})"
         return f"Err({repr(self._left)})"
 
-    Ok = _OkFactory()
-    Err = _ErrFactory()
+    @classmethod
+    def Ok(cls, value: T) -> "Result[T, E]":
+        return cls(right=value)
+
+    @classmethod
+    def Err(cls, error: E) -> "Result[T, E]":
+        return cls(left=error)
 
 
 Ok = Result.Ok

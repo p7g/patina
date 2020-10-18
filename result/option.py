@@ -20,8 +20,8 @@ value and take action, always accounting for the None\\_ case.
 
 >>> def divide(numerator: float, denominator: float) -> Option[float]:
 ...     if denominator == 0.0:
-...         return None_()
-...     return Some(numerator / denominator)
+...         return Option.None_()
+...     return Option.Some(numerator / denominator)
 ...
 >>> result = divide(2.0, 3.0)
 >>>
@@ -37,7 +37,7 @@ Examples
 
 Basic pattern matching on Option:
 
->>> msg = Some("howdy")
+>>> msg = Option.Some("howdy")
 >>>
 >>> if msg.is_some():
 ...     print(msg.unwrap())
@@ -71,13 +71,13 @@ Initialize a result to None\\_ before a loop:
 >>>
 >>> # We're going to search for the name of the biggest animal, but to start
 >>> # with we've just got `None_`
->>> name_of_biggest_animal: Option[str] = None_()
+>>> name_of_biggest_animal: Option[str] = Option.None_()
 >>> size_of_biggest_animal = 0
 >>> for big_thing in all_the_big_things:
 ...     if isinstance(big_thing, AnimalKingdom) \\
 ...             and big_thing.size > size_of_biggest_animal:
 ...         size_of_biggest_animal = big_thing.size
-...         name_of_biggest_animal = Some(big_thing.name)
+...         name_of_biggest_animal = Option.Some(big_thing.name)
 ...
 >>> if name_of_biggest_animal.is_some():
 ...     print(f"the biggest animal is {name_of_biggest_animal.unwrap()}")
@@ -97,7 +97,7 @@ from typing import (
 )
 
 from .ref import Ref
-from ._utils import _nothing, _Nothing, FakeGeneric
+from ._utils import nothing, Nothing
 
 __all__ = ("Option", "Some", "None_")
 
@@ -106,48 +106,38 @@ U = TypeVar("U")
 E = TypeVar("E")
 
 
-class _NoneFactory(FakeGeneric):
-    def __call__(self) -> "Option[T]":
-        return Option()
-
-
-class _SomeFactory(FakeGeneric):
-    def __call__(self, value: T) -> "Option[T]":
-        return Option(value)
-
-
 class Option(Generic[T]):
     """The ``Option`` type. See the module-level documentation for more."""
 
     __slots__ = ("_value",)
-    _value: Union[_Nothing, T]
+    _value: Union[Nothing, T]
 
-    def __init__(self, value: Union[_Nothing, T] = _nothing):
+    def __init__(self, value: Union[Nothing, T] = nothing):
         self._value = value
 
     def is_some(self) -> bool:
         """Returns ``True`` if the option is a Some value.
 
-        >>> x: Option[int] = Some(2)
+        >>> x: Option[int] = Option.Some(2)
         >>> x.is_some()
         True
-        >>> x: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
         >>> x.is_some()
         False
         """
-        return self._value is not _nothing
+        return self._value is not nothing
 
     def is_none(self) -> bool:
         """Returns ``True`` if the option is a None\\_ value.
 
-        >>> x: Option[int] = Some(2)
+        >>> x: Option[int] = Option.Some(2)
         >>> x.is_none()
         False
-        >>> x: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
         >>> x.is_none()
         True
         """
-        return self._value is _nothing
+        return self._value is nothing
 
     def expect(self, msg: str) -> T:
         """Returns the contained Some value.
@@ -155,16 +145,16 @@ class Option(Generic[T]):
         :raises AssertionError: Raised if the value is a None\\_ with a custom
             message provided by ``msg``.
 
-        >>> x = Some("value")
+        >>> x = Option.Some("value")
         >>> x.expect("fruits are healthy")
         'value'
-        >>> x: Option[str] = None_()
+        >>> x: Option[str] = Option.None_()
         >>> x.expect("fruits are healthy")
         Traceback (most recent call last):
             ...
         AssertionError: fruits are healthy
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             raise AssertionError(msg)
         return self._value
 
@@ -178,16 +168,16 @@ class Option(Generic[T]):
 
         :raises AssertionError: Raised if the self value is None\\_.
 
-        >>> x = Some("air")
+        >>> x = Option.Some("air")
         >>> x.unwrap()
         'air'
-        >>> x: Option[str] = None_()
+        >>> x: Option[str] = Option.None_()
         >>> x.unwrap()
         Traceback (most recent call last):
             ...
         AssertionError: called `Option.unwrap` on a `None_` value
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             raise AssertionError("called `Option.unwrap` on a `None_` value")
         return self._value
 
@@ -198,12 +188,12 @@ class Option(Generic[T]):
         passing the result of a function call, it is recommended to use
         ``unwrap_or_else``, which is lazily evaluated.
 
-        >>> Some("car").unwrap_or("bike")
+        >>> Option.Some("car").unwrap_or("bike")
         'car'
-        >>> None_[str]().unwrap_or("bike")
+        >>> Option[str].None_().unwrap_or("bike")
         'bike'
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             return default
         return self._value
 
@@ -211,12 +201,12 @@ class Option(Generic[T]):
         """Returns the contained Some value or computes it from a closure.
 
         >>> k = 10
-        >>> Some(4).unwrap_or_else(lambda: 2 * k)
+        >>> Option.Some(4).unwrap_or_else(lambda: 2 * k)
         4
-        >>> None_[int]().unwrap_or_else(lambda: 2 * k)
+        >>> Option[int].None_().unwrap_or_else(lambda: 2 * k)
         20
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             return f()
         return self._value
 
@@ -226,14 +216,14 @@ class Option(Generic[T]):
 
         Converts an ``Option[str]`` into an ``Option[int]``:
 
-        >>> maybe_some_string = Some("Hello, World!")
+        >>> maybe_some_string = Option.Some("Hello, World!")
         >>> maybe_some_len = maybe_some_string.map(len)
         >>> maybe_some_len
         Some(13)
         """
-        if self._value is _nothing:
-            return None_()
-        return Some(f(self._value))
+        if self._value is nothing:
+            return Option.None_()
+        return Option.Some(f(self._value))
 
     def map_or(self, default: U, f: Callable[[T], U]) -> U:
         """Applies a function to the contained value (if any), or returns the
@@ -243,14 +233,14 @@ class Option(Generic[T]):
         the result of a function call, it is recommended to use ``map_or_else``,
         which is lazily evaluated.
 
-        >>> x = Some("foo")
+        >>> x = Option.Some("foo")
         >>> x.map_or(42, len)
         3
-        >>> x: Option[str] = None_()
+        >>> x: Option[str] = Option.None_()
         >>> x.map_or(42, len)
         42
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             return default
         return f(self._value)
 
@@ -260,14 +250,14 @@ class Option(Generic[T]):
 
         >>> k = 21
         >>>
-        >>> x = Some("foo")
+        >>> x = Option.Some("foo")
         >>> x.map_or_else(lambda: 2 * k, len)
         3
-        >>> x: Option[str] = None_()
+        >>> x: Option[str] = Option.None_()
         >>> x.map_or_else(lambda: 2 * k, len)
         42
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             return default()
         return f(self._value)
 
@@ -279,14 +269,14 @@ class Option(Generic[T]):
         the result of a function call, it is recommended to use ``ok_or_else``,
         which is lazily evaluated.
 
-        >>> x = Some("foo")
+        >>> x = Option.Some("foo")
         >>> x.ok_or(0)
         Ok('foo')
-        >>> x: Option[str] = None_()
+        >>> x: Option[str] = Option.None_()
         >>> x.ok_or(0)
         Err(0)
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             return Result.Err(err)
         return Result.Ok(self._value)
 
@@ -294,39 +284,39 @@ class Option(Generic[T]):
         """Transforms the ``Option[T]`` into a ``Result[T, E]``, mapping
         ``Some(v)`` to ``Ok(v)`` and ``None_`` to ``Err(err())``.
 
-        >>> x = Some("foo")
+        >>> x = Option.Some("foo")
         >>> x.ok_or_else(lambda: 0)
         Ok('foo')
-        >>> x: Option[str] = None_()
+        >>> x: Option[str] = Option.None_()
         >>> x.ok_or_else(lambda: 0)
         Err(0)
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             return Result.Err(err())
         return Result.Ok(self._value)
 
     def iter(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
 
-        >>> x = Some(4)
+        >>> x = Option.Some(4)
         >>> next(x.iter())
         4
-        >>> x: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
         >>> next(x.iter())
         Traceback (most recent call last):
             ...
         StopIteration
         """
-        if self._value is not _nothing:
+        if self._value is not nothing:
             yield self._value
 
     def __iter__(self):
         """Returns an iterator over the possibly contained value.
 
-        >>> x = Some(4)
+        >>> x = Option.Some(4)
         >>> next(iter(x))
         4
-        >>> x: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
         >>> next(iter(x))
         Traceback (most recent call last):
             ...
@@ -338,25 +328,25 @@ class Option(Generic[T]):
         """Returns ``None_`` if the option is ``None_``, otherwise returns
         ``optb``.
 
-        >>> x = Some(2)
-        >>> y: Option[str] = None_()
+        >>> x = Option.Some(2)
+        >>> y: Option[str] = Option.None_()
         >>> x.and_(y)
         None_
-        >>> x: Option[int] = None_()
-        >>> y = Some("foo")
+        >>> x: Option[int] = Option.None_()
+        >>> y = Option.Some("foo")
         >>> x.and_(y)
         None_
-        >>> x = Some(2)
-        >>> y = Some("foo")
+        >>> x = Option.Some(2)
+        >>> y = Option.Some("foo")
         >>> x.and_(y)
         Some('foo')
-        >>> x: Option[int] = None_()
-        >>> y: Option[str] = None_()
+        >>> x: Option[int] = Option.None_()
+        >>> y: Option[str] = Option.None_()
         >>> x.and_(y)
         None_
         """
-        if self._value is _nothing:
-            return None_()
+        if self._value is nothing:
+            return Option.None_()
         return optb
 
     def and_then(self, f: Callable[[T], "Option[U]"]) -> "Option[U]":
@@ -365,21 +355,21 @@ class Option(Generic[T]):
 
         Some languages call this operation flatmap.
 
-        >>> def sq(x: int) -> Option[int]: return Some(x * x)
+        >>> def sq(x: int) -> Option[int]: return Option.Some(x * x)
         ...
-        >>> def nope(_: int) -> Option[int]: return None_()
+        >>> def nope(_: int) -> Option[int]: return Option.None_()
         ...
-        >>> Some(2).and_then(sq).and_then(sq)
+        >>> Option.Some(2).and_then(sq).and_then(sq)
         Some(16)
-        >>> Some(2).and_then(sq).and_then(nope)
+        >>> Option.Some(2).and_then(sq).and_then(nope)
         None_
-        >>> Some(2).and_then(nope).and_then(sq)
+        >>> Option.Some(2).and_then(nope).and_then(sq)
         None_
-        >>> None_().and_then(sq).and_then(sq)
+        >>> Option.None_().and_then(sq).and_then(sq)
         None_
         """
-        if self._value is _nothing:
-            return None_()
+        if self._value is nothing:
+            return Option.None_()
         return f(self._value)
 
     def filter(self, predicate: Callable[[T], bool]) -> "Option[T]":
@@ -396,16 +386,16 @@ class Option(Generic[T]):
 
         >>> def is_even(n: int) -> bool: return n % 2 == 0
         ...
-        >>> None_().filter(is_even)
+        >>> Option.None_().filter(is_even)
         None_
-        >>> Some(3).filter(is_even)
+        >>> Option.Some(3).filter(is_even)
         None_
-        >>> Some(4).filter(is_even)
+        >>> Option.Some(4).filter(is_even)
         Some(4)
         """
-        if self._value is _nothing or not predicate(self._value):
-            return None_()
-        return Some(self._value)
+        if self._value is nothing or not predicate(self._value):
+            return Option.None_()
+        return Option.Some(self._value)
 
     def or_(self, optb: "Option[T]") -> "Option[T]":
         """Returns the option if it contains a value, otherwise returns
@@ -415,81 +405,81 @@ class Option(Generic[T]):
         result of a function call, it is recommended to use ``or_else``, which
         is lazily evaluated.
 
-        >>> x = Some(2)
-        >>> y: Option[int] = None_()
+        >>> x = Option.Some(2)
+        >>> y: Option[int] = Option.None_()
         >>> x.or_(y)
         Some(2)
-        >>> x: Option[int] = None_()
-        >>> y = Some(100)
+        >>> x: Option[int] = Option.None_()
+        >>> y = Option.Some(100)
         >>> x.or_(y)
         Some(100)
-        >>> x = Some(2)
-        >>> y = Some(100)
+        >>> x = Option.Some(2)
+        >>> y = Option.Some(100)
         >>> x.or_(y)
         Some(2)
-        >>> x: Option[int] = None_()
-        >>> y: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
+        >>> y: Option[int] = Option.None_()
         >>> x.or_(y)
         None_
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             return optb
-        return Some(self._value)
+        return Option.Some(self._value)
 
     def or_else(self, f: Callable[[], "Option[T]"]) -> "Option[T]":
         """Returns the option if it contains a value, otherwise calls ``f`` and
         returns the result.
 
-        >>> def nobody() -> Option[str]: return None_()
+        >>> def nobody() -> Option[str]: return Option.None_()
         ...
-        >>> def vikings() -> Option[str]: return Some("vikings")
+        >>> def vikings() -> Option[str]: return Option.Some("vikings")
         ...
-        >>> Some("barbarians").or_else(vikings)
+        >>> Option.Some("barbarians").or_else(vikings)
         Some('barbarians')
-        >>> None_[str]().or_else(vikings)
+        >>> Option[str].None_().or_else(vikings)
         Some('vikings')
-        >>> None_[str]().or_else(nobody)
+        >>> Option[str].None_().or_else(nobody)
         None_
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             return f()
-        return Some(self._value)
+        return Option.Some(self._value)
 
     def xor(self, optb: "Option[T]") -> "Option[T]":
         """Returns Some if exactly one of ``self``, ``optb`` is Some, otherwise
         returns ``None_``.
 
-        >>> x = Some(2)
-        >>> y: Option[int] = None_()
+        >>> x = Option.Some(2)
+        >>> y: Option[int] = Option.None_()
         >>> x.xor(y)
         Some(2)
-        >>> x: Option[int] = None_()
-        >>> y = Some(2)
+        >>> x: Option[int] = Option.None_()
+        >>> y = Option.Some(2)
         >>> x.xor(y)
         Some(2)
-        >>> x = Some(2)
-        >>> y = Some(2)
+        >>> x = Option.Some(2)
+        >>> y = Option.Some(2)
         >>> x.xor(y)
         None_
-        >>> x: Option[int] = None_()
-        >>> y: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
+        >>> y: Option[int] = Option.None_()
         >>> x.xor(y)
         None_
         """
-        if self._value is _nothing and optb._value is not _nothing:
-            return Some(optb._value)
-        if self._value is not _nothing and optb._value is _nothing:
-            return Some(self._value)
-        return None_()
+        if self._value is nothing and optb._value is not nothing:
+            return Option.Some(optb._value)
+        if self._value is not nothing and optb._value is nothing:
+            return Option.Some(self._value)
+        return Option.None_()
 
     def _make_value_ref(self) -> Ref[T]:
         def get_value() -> T:
-            if self._value is _nothing:
+            if self._value is nothing:
                 raise AssertionError("Reading reference to None_ value")
             return self._value
 
         def set_value(value: T):
-            if self._value is _nothing:
+            if self._value is nothing:
                 raise AssertionError("Writing to reference to None_ value")
             self._value = value
 
@@ -499,7 +489,7 @@ class Option(Generic[T]):
         """Inserts ``v`` into the option if it is ``None_``, then returns
         a reference to the contained value.
 
-        >>> x: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
         >>> y = x.get_or_insert(5)
         >>> y.get()
         5
@@ -507,7 +497,7 @@ class Option(Generic[T]):
         >>> x
         Some(7)
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             self._value = v
         return self._make_value_ref()
 
@@ -515,7 +505,7 @@ class Option(Generic[T]):
         """Inserts a value computed from ``f`` into the option if it is
         ``None_``, then returns a reference to the contained value.
 
-        >>> x: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
         >>> y = x.get_or_insert_with(lambda: 5)
         >>> y.get()
         5
@@ -523,43 +513,43 @@ class Option(Generic[T]):
         >>> x
         Some(7)
         """
-        if self._value is _nothing:
+        if self._value is nothing:
             self._value = f()
         return self._make_value_ref()
 
     def take(self) -> "Option[T]":
         """Takes the value out of the option, leaving a ``None_`` in its place.
 
-        >>> x = Some(2)
+        >>> x = Option.Some(2)
         >>> y = x.take()
         >>> x
         None_
         >>> y
         Some(2)
-        >>> x: Option[int] = None_()
+        >>> x: Option[int] = Option.None_()
         >>> y = x.take()
         >>> x
         None_
         >>> y
         None_
         """
-        if self._value is _nothing:
-            return None_()
-        value, self._value = self._value, _nothing
-        return Some(value)
+        if self._value is nothing:
+            return Option.None_()
+        value, self._value = self._value, nothing
+        return Option.Some(value)
 
     def replace(self, value: T) -> "Option[T]":
         """Replaces the actual value in the option by the value given in
         parameter, returning the old value if present, leaving a ``Some`` in its
         place without deinitializing either one.
 
-        >>> x = Some(2)
+        >>> x = Option.Some(2)
         >>> old = x.replace(5)
         >>> x
         Some(5)
         >>> old
         Some(2)
-        >>> x = None_[int]()
+        >>> x = Option[int].None_()
         >>> old = x.replace(3)
         >>> x
         Some(3)
@@ -567,9 +557,9 @@ class Option(Generic[T]):
         None_
         """
         old_value, self._value = self._value, value
-        if old_value is _nothing:
-            return None_()
-        return Some(old_value)
+        if old_value is nothing:
+            return Option.None_()
+        return Option.Some(old_value)
 
     def zip(self, other: "Option[U]") -> "Option[Tuple[T, U]]":
         """Zips ``self`` with another ``Option``.
@@ -577,28 +567,34 @@ class Option(Generic[T]):
         If ``self`` is ``Some(s)`` and ``other`` is ``Some(o)``, this method
         returns ``Some((s, o))``. Otherwise, ``None_`` is returned.
 
-        >>> x = Some(1)
-        >>> y = Some("hi")
-        >>> z = None_[int]()
+        >>> x = Option.Some(1)
+        >>> y = Option.Some("hi")
+        >>> z = Option[int].None_()
         >>> x.zip(y)
         Some((1, 'hi'))
         >>> x.zip(z)
         None_
         """
-        if self._value is _nothing or other._value is _nothing:
-            return None_()
-        return Some((self._value, other._value))
+        if self._value is nothing or other._value is nothing:
+            return Option.None_()
+        return Option.Some((self._value, other._value))
 
     def __repr__(self):
-        if self._value is _nothing:
+        if self._value is nothing:
             return "None_"
         return f"Some({repr(self._value)})"
 
-    Some = _SomeFactory()
-    None_ = _NoneFactory()
+    @classmethod
+    def Some(cls, value: T) -> "Option[T]":
+        return cls(value)
+
+    @classmethod
+    def None_(cls) -> "Option[T]":
+        return cls()
 
 
 Some = Option.Some
 None_ = Option.None_
+
 
 from .result import Result  # noqa E402

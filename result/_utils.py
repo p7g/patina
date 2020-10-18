@@ -46,13 +46,8 @@ def dependent_ord(attr_name: Union[Callable[[T], str], str]):
 
 
 @final
-class _Nothing(enum.Enum):
+class Nothing(enum.Enum):
     nothing = 0
 
 
-_nothing: Final = _Nothing.nothing
-
-
-class FakeGeneric:
-    def __getitem__(self, *args, **kwargs):
-        return self
+nothing: Final = Nothing.nothing
