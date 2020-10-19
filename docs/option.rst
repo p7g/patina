@@ -7,14 +7,14 @@ See the original Rust documentation here_.
 
 ----
 
-.. currentmodule:: result.option
+.. currentmodule:: patina.option
 
-.. autosummary:: result.option
+.. autosummary:: patina.option
    Option
    Some
    None_
 
-.. automodule:: result.option
+.. automodule:: patina.option
    :members: Some, None_
 
    The Option Type

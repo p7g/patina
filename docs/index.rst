@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to result's documentation!
-==================================
+Patina - Rusty types for Python
+===============================
 
 This is an implementation of Rust's Result_ and Option_ types in Python. Almost
 all methods have been implemented. Excluded are those that involve Rust's

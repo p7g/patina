@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "result"
+name = "patina"
 version = "0.1.0"
 description = "Result and Option types for Python"
 authors = ["Patrick Gingras <775.pg.12@gmail.com>"]

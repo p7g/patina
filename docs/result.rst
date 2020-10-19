@@ -7,14 +7,14 @@ See the original Rust documentation here_.
 
 ----
 
-.. currentmodule:: result.result
+.. currentmodule:: patina.result
 
-.. autosummary:: result.result
+.. autosummary:: patina.result
    Result
    Ok
    Err
 
-.. automodule:: result.result
+.. automodule:: patina.result
    :members: Ok, Err
 
    The Result Type

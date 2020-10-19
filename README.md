@@ -1,4 +1,4 @@
-# result
+# patina
 
 [![Documentation Status](https://readthedocs.org/projects/result/badge/?version=latest)](https://result.readthedocs.io/en/latest/?badge=latest)
 

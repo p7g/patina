@@ -27,9 +27,9 @@ jobs:
         poetry install
     - name: Lint Python
       run: |
-        poetry run flake8 result
-        poetry run mypy result
-        poetry run black --check result
+        poetry run flake8 patina
+        poetry run mypy patina
+        poetry run black --check patina
     - name: Run doctests
       run: |
         poetry run ./run-doctests -v

@@ -1,5 +1,5 @@
 __pycache__
 .vscode
 .mypy_cache
-result.egg-info
+patina.egg-info
 docs/_build
