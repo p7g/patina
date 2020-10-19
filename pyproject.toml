@@ -4,6 +4,14 @@ version = "0.1.0"
 description = "Result and Option types for Python"
 authors = ["Patrick Gingras <775.pg.12@gmail.com>"]
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/p7g/patina"
+documentation = "https://patina.rtfd.io"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 
 [tool.poetry.dependencies]
 python = "^3.6"

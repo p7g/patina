@@ -3,3 +3,4 @@ __pycache__
 .mypy_cache
 patina.egg-info
 docs/_build
+dist
