@@ -1,6 +1,6 @@
 # patina
 
-[![Documentation Status](https://readthedocs.org/projects/result/badge/?version=latest)](https://result.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/patina/badge/?version=latest)](https://patina.readthedocs.io/en/latest/?badge=latest)
 
 This is an implementation of Rust's Result and Option types in Python. Most
 methods have been implemented, and the (very good) [original documentation] has
