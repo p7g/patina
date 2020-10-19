@@ -91,6 +91,7 @@ from typing import (
     Callable,
     Generic,
     Iterator,
+    Optional,
     Tuple,
     TypeVar,
     Union,
@@ -599,6 +600,25 @@ class Option(Generic[T]):
     def None_(cls) -> "Option[T]":
         """No value"""
         return cls()
+
+    @classmethod
+    def from_optional(cls, opt: Optional[T]) -> "Option[T]":
+        """Get an ``Option[T]`` from an :class:`Optional[T] <Optional>`.
+
+        If ``opt`` is :obj:`None`, return :meth:`None_`, otherwise return
+        :meth:`Some(obj) <Some>`. This does not come from Rust's API.
+
+        >>> from typing import Optional
+        >>> x: Optional[int] = None
+        >>> Option.from_optional(x)
+        None_
+        >>> x: Optional[int] = 42
+        >>> Option.from_optional(x)
+        Some(42)
+        """
+        if opt is None:
+            return cls.None_()
+        return cls.Some(opt)
 
 
 Some = Option.Some
