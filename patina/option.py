@@ -121,7 +121,7 @@ class Option(Generic[T]):
         """
         self._value = value
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         """Returns :obj:`True` if the option is a ``Some`` value, else :obj:,
         else :obj:`False`.
         >>> x: Option[int] = Some(2)
