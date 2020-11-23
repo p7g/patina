@@ -1,6 +1,6 @@
 import enum
 import operator
-from collections import Hashable
+from collections.abc import Hashable
 from typing import cast, Any, Callable, TypeVar, Union
 from typing_extensions import final, Final
 
