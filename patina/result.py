@@ -63,14 +63,15 @@ True
 True
 """
 
-import enum
-from typing import Callable, Generic, Iterator, TypeVar, Union
-from typing_extensions import final
+from abc import ABC, abstractmethod
+from typing import Callable, Generic, Iterator, TypeVar
 
-from .option import Option
-from ._utils import dependent_hash, dependent_ord, nothing, Nothing
+from .option import Option, Some, None_
+from ._utils import dependent_hash, dependent_ord
 
 __all__ = ("Result", "Ok", "Err")
+
+_Result_slots = ("_value",)
 
 T = TypeVar("T")
 E = TypeVar("E")
@@ -78,49 +79,15 @@ U = TypeVar("U")
 F = TypeVar("F")
 
 
-@final
-class _ResultState(enum.Enum):
-    ok = enum.auto()
-    err = enum.auto()
-
-
-def _result_value_attr(r: "Result[T, E]") -> str:
-    return "_left" if r._state is _ResultState.err else "_right"
-
-
-@dependent_ord(_result_value_attr)
-class Result(Generic[T, E]):
+@dependent_ord("_value")
+class Result(ABC, Generic[T, E]):
     """``Result`` is a type that represents either success (:meth:`Ok`) or
     failure (:meth:`Err`).
     """
 
-    __slots__ = ("_state", "_left", "_right")
-    _state: _ResultState
-    _left: E
-    _right: T
+    __match_args__ = ("_value",)
 
-    def __init__(
-        self,
-        *,
-        left: Union[Nothing, E] = nothing,
-        right: Union[Nothing, T] = nothing,
-    ):
-        """This constructor should not be called directly.
-
-        Instead, use :meth:`Ok` or :meth:`Err`.
-        """
-        if left is nothing and right is not nothing:
-            self._state = _ResultState.ok
-            self._right = right
-        elif left is not nothing and right is nothing:
-            self._state = _ResultState.err
-            self._left = left
-        else:
-            raise AssertionError(
-                "One and only one of `left` and `right` must be supplied to "
-                "Result.__init__"
-            )
-
+    @abstractmethod
     def is_ok(self) -> bool:
         """Returns :obj:`True` if the result is :meth:`Ok`.
 
@@ -134,8 +101,8 @@ class Result(Generic[T, E]):
         >>> x.is_ok()
         False
         """
-        return self._state is _ResultState.ok
 
+    @abstractmethod
     def is_err(self) -> bool:
         """Returns :obj:`True` if the result is :meth:`Err`.
 
@@ -149,8 +116,8 @@ class Result(Generic[T, E]):
         >>> x.is_err()
         True
         """
-        return self._state is _ResultState.err
 
+    @abstractmethod
     def ok(self) -> Option[T]:
         """Converts from ``Result[T, E]`` to :class:`Option[T]
         <result.option.Option>`.
@@ -167,10 +134,8 @@ class Result(Generic[T, E]):
         >>> x.ok()
         None_
         """
-        if self._state is _ResultState.err:
-            return Option.None_()
-        return Option.Some(self._right)
 
+    @abstractmethod
     def err(self) -> Option[E]:
         """Converts from ``Result[T, E]`` to :class:`Option[E]
         <result.option.Option>`.
@@ -188,10 +153,8 @@ class Result(Generic[T, E]):
         >>> x.err()
         Some('Nothing here')
         """
-        if self._state is _ResultState.ok:
-            return Option.None_()
-        return Option.Some(self._left)
 
+    @abstractmethod
     def map(self, op: Callable[[T], U]) -> "Result[U, E]":
         """Maps a ``Result[T, E]`` to ``Result[U, E]`` by applying a function to
         a contained :meth:`Ok` value, leaving an :meth:`Err` value untouched.
@@ -217,9 +180,6 @@ class Result(Generic[T, E]):
         8
         10
         """
-        if self._state is _ResultState.err:
-            return Err(self._left)
-        return Ok(op(self._right))
 
     def map_or(self, default: U, f: Callable[[T], U]) -> U:
         """Applies a function to the contained value (if :meth:`Ok`), or returns
@@ -237,10 +197,10 @@ class Result(Generic[T, E]):
         >>> x.map_or(42, lambda v: len(v))
         42
         """
-        if self._state is _ResultState.err:
-            return default
-        return f(self._right)
+        # https://github.com/python/mypy/issues/230
+        return self.map_or_else(lambda _: default, f)  # type: ignore
 
+    @abstractmethod
     def map_or_else(self, default: Callable[[E], U], f: Callable[[T], U]) -> U:
         """Maps a ``Result[T, E]`` to ``U`` by applying a function to a
         contained :meth:`Ok` value, or a fallback function to a contained
@@ -261,10 +221,8 @@ class Result(Generic[T, E]):
         >>> x.map_or_else(lambda e: k * 2, lambda v: len(v))
         42
         """
-        if self._state is _ResultState.err:
-            return default(self._left)
-        return f(self._right)
 
+    @abstractmethod
     def map_err(self, op: Callable[[E], F]) -> "Result[T, F]":
         """Maps a ``Result[T, E]`` to ``Result[T, F]`` by applying a function to
         a contained :meth:`Err` value, leaving an :meth:`Ok` value untouched.
@@ -285,9 +243,6 @@ class Result(Generic[T, E]):
         >>> x.map_err(stringify)
         Err('error code: 13')
         """
-        if self._state is _ResultState.ok:
-            return Ok(self._right)
-        return Err(op(self._left))
 
     def iter(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
@@ -307,9 +262,9 @@ class Result(Generic[T, E]):
             ...
         StopIteration
         """
-        if self._state is _ResultState.ok:
-            yield self._right
+        return iter(self)
 
+    @abstractmethod
     def __iter__(self) -> Iterator[T]:
         """Returns an iterator over the possibly contained value.
 
@@ -328,7 +283,6 @@ class Result(Generic[T, E]):
             ...
         StopIteration
         """
-        return self.iter()
 
     def and_(self, res: "Result[U, E]") -> "Result[U, E]":
         """Returns ``res`` if the result is :meth:`Ok`, otherwise returns the
@@ -356,10 +310,9 @@ class Result(Generic[T, E]):
         >>> x.and_(y)
         Ok('different result type')
         """
-        if self._state is _ResultState.ok:
-            return res
-        return Err(self._left)
+        return self.and_then(lambda _: res)
 
+    @abstractmethod
     def and_then(self, op: Callable[[T], "Result[U, E]"]) -> "Result[U, E]":
         """Calls ``op`` if the result is :meth:`Ok`, otherwise returns the
         :meth:`Err` value of ``self``.
@@ -373,18 +326,15 @@ class Result(Generic[T, E]):
         ...
         >>> def err(x: int) -> Result[int, int]: return Err(x)
         ...
-        >>> Result[int, int].Ok(2).and_then(sq).and_then(sq)
+        >>> Ok[int, int](2).and_then(sq).and_then(sq)
         Ok(16)
-        >>> Result[int, int].Ok(2).and_then(sq).and_then(err)
+        >>> Ok[int, int](2).and_then(sq).and_then(err)
         Err(4)
-        >>> Result[int, int].Ok(2).and_then(err).and_then(sq)
+        >>> Ok[int, int](2).and_then(err).and_then(sq)
         Err(2)
-        >>> Err(3).and_then(sq).and_then(sq)
+        >>> Err[int, int](3).and_then(sq).and_then(sq)
         Err(3)
         """
-        if self._state is _ResultState.err:
-            return Err(self._left)
-        return op(self._right)
 
     def or_(self, res: "Result[T, F]") -> "Result[T, F]":
         """Returns ``res`` if the result is :meth:`Err`, otherwise returns the
@@ -416,10 +366,9 @@ class Result(Generic[T, E]):
         >>> x.or_(y)
         Ok(2)
         """
-        if self._state is _ResultState.ok:
-            return Ok(self._right)
-        return res
+        return self.or_else(lambda _: res)
 
+    @abstractmethod
     def or_else(self, op: Callable[[E], "Result[T, F]"]) -> "Result[T, F]":
         """Calls ``op`` if the result is :meth:`Err`, otherwise returns returns
         the :meth:`Ok` value from self.
@@ -432,18 +381,15 @@ class Result(Generic[T, E]):
         ...
         >>> def err(x: int) -> Result[int, int]: return Err(x)
         ...
-        >>> Result[int, int].Ok(2).or_else(sq).or_else(sq)
+        >>> Ok[int, int](2).or_else(sq).or_else(sq)
         Ok(2)
-        >>> Result[int, int].Ok(2).or_else(err).or_else(sq)
+        >>> Ok[int, int](2).or_else(err).or_else(sq)
         Ok(2)
-        >>> Result[int, int].Err(3).or_else(sq).or_else(err)
+        >>> Err[int, int](3).or_else(sq).or_else(err)
         Ok(9)
-        >>> Result[int, int].Err(3).or_else(err).or_else(err)
+        >>> Err[int, int](3).or_else(err).or_else(err)
         Err(3)
         """
-        if self._state is _ResultState.ok:
-            return Ok(self._right)
-        return op(self._left)
 
     def unwrap_or(self, default: T) -> T:
         """Returns the contained :meth:`Ok` value or a provided default.
@@ -463,10 +409,9 @@ class Result(Generic[T, E]):
         >>> x.unwrap_or(default)
         2
         """
-        if self._state is _ResultState.err:
-            return default
-        return self._right
+        return self.unwrap_or_else(lambda _: default)
 
+    @abstractmethod
     def unwrap_or_else(self, op: Callable[[E], T]) -> T:
         """Returns the contained :meth:`Ok` value or computes it from a closure.
 
@@ -474,15 +419,13 @@ class Result(Generic[T, E]):
 
         >>> def count(x: str) -> int: return len(x)
         ...
-        >>> Ok(2).unwrap_or_else(count)
+        >>> Ok[int, str](2).unwrap_or_else(count)
         2
-        >>> Result[int, str].Err("foo").unwrap_or_else(count)
+        >>> Err[int, str]("foo").unwrap_or_else(count)
         3
         """
-        if self._state is _ResultState.err:
-            return op(self._left)
-        return self._right
 
+    @abstractmethod
     def expect(self, msg: str) -> T:
         """Returns the contained :meth:`Ok` value.
 
@@ -497,10 +440,8 @@ class Result(Generic[T, E]):
             ...
         AssertionError: Testing expect: 'emergency failure'
         """
-        if self._state is _ResultState.err:
-            raise AssertionError(f"{msg}: {repr(self._left)}")
-        return self._right
 
+    @abstractmethod
     def unwrap(self) -> T:
         """Returns the contained :meth:`Ok` value, consuming the ``self`` value.
 
@@ -523,10 +464,8 @@ class Result(Generic[T, E]):
             ...
         AssertionError: emergency failure
         """
-        if self._state is _ResultState.err:
-            raise AssertionError(self._left)
-        return self._right
 
+    @abstractmethod
     def expect_err(self, msg: str) -> E:
         """Returns the contained :meth:`Err` value.
 
@@ -541,10 +480,8 @@ class Result(Generic[T, E]):
             ...
         AssertionError: Testing expect_err: 10
         """
-        if self._state is _ResultState.ok:
-            raise AssertionError(f"{msg}: {repr(self._right)}")
-        return self._left
 
+    @abstractmethod
     def unwrap_err(self) -> E:
         """Returns the contained :meth:`Err` value.
 
@@ -561,27 +498,120 @@ class Result(Generic[T, E]):
         >>> x.unwrap_err()
         'emergency failure'
         """
-        if self._state is _ResultState.ok:
-            raise AssertionError(self._right)
-        return self._left
 
-    __hash__ = dependent_hash(_result_value_attr)
+    __hash__ = dependent_hash("_value")
+
+    @abstractmethod
+    def __repr__(self):
+        ...
+
+
+class Ok(Result[T, E]):
+    __slots__ = _Result_slots
+
+    def __init__(self, value):
+        self._value = value
+
+    def is_ok(self) -> bool:
+        return True
+
+    def is_err(self) -> bool:
+        return False
+
+    def ok(self) -> Option[T]:
+        return Some(self._value)
+
+    def err(self) -> Option[E]:
+        return None_()
+
+    def map(self, op: Callable[[T], U]) -> Result[U, E]:
+        return Ok(op(self._value))
+
+    def map_or_else(self, default: Callable[[E], U], f: Callable[[T], U]) -> U:
+        return f(self._value)
+
+    def map_err(self, op: Callable[[E], F]) -> Result[T, F]:
+        return Ok(self._value)
+
+    def __iter__(self):
+        yield self._value
+
+    def and_then(self, op: Callable[[T], Result[U, E]]) -> Result[U, E]:
+        return op(self._value)
+
+    def or_else(self, op: Callable[[E], Result[T, F]]) -> Result[T, F]:
+        return Ok(self._value)
+
+    def unwrap_or_else(self, op: Callable[[E], T]) -> T:
+        return self._value
+
+    def expect(self, msg: str) -> T:
+        return self._value
+
+    def unwrap(self) -> T:
+        return self._value
+
+    def expect_err(self, msg: str) -> E:
+        raise AssertionError(f"{msg}: {self._value!r}")
+
+    def unwrap_err(self) -> E:
+        raise AssertionError(self._value)
 
     def __repr__(self):
-        if self._state is _ResultState.ok:
-            return f"Ok({repr(self._right)})"
-        return f"Err({repr(self._left)})"
-
-    @classmethod
-    def Ok(cls, value: T) -> "Result[T, E]":
-        """Contains the success value"""
-        return cls(right=value)
-
-    @classmethod
-    def Err(cls, error: E) -> "Result[T, E]":
-        """Contains the error value"""
-        return cls(left=error)
+        return f"Ok({self._value!r})"
 
 
-Ok = Result.Ok
-Err = Result.Err
+class Err(Result[T, E]):
+    __slots__ = _Result_slots
+
+    def __init__(self, error):
+        self._value = error
+
+    def is_ok(self) -> bool:
+        return False
+
+    def is_err(self) -> bool:
+        return True
+
+    def ok(self) -> Option[T]:
+        return None_()
+
+    def err(self) -> Option[E]:
+        return Some(self._value)
+
+    def map(self, op: Callable[[T], U]) -> Result[U, E]:
+        return Err(self._value)
+
+    def map_or_else(self, default: Callable[[E], U], f: Callable[[T], U]) -> U:
+        return default(self._value)
+
+    def map_err(self, op: Callable[[E], F]) -> Result[T, F]:
+        return Err(op(self._value))
+
+    def __iter__(self):
+        return
+        yield
+
+    def and_then(self, op: Callable[[T], Result[U, E]]) -> Result[U, E]:
+        return Err(self._value)
+
+    def or_else(self, op: Callable[[E], Result[T, F]]) -> Result[T, F]:
+        return op(self._value)
+
+    def unwrap_or_else(self, op: Callable[[E], T]) -> T:
+        return op(self._value)
+
+    def expect(self, msg: str) -> T:
+        raise AssertionError(f"{msg}: {self._value!r}")
+
+    def unwrap(self) -> T:
+        raise AssertionError(self._value)
+
+    def expect_err(self, msg: str) -> E:
+        return self._value
+
+    def unwrap_err(self) -> E:
+        return self._value
+
+    def __repr__(self):
+        return f"Err({self._value!r})"
