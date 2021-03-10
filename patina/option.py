@@ -119,8 +119,9 @@ class Option(ABC, Generic[T]):
     __hash__ = dependent_hash("_value")
 
     def __bool__(self) -> bool:
-        """Returns :obj:`True` if the option is a ``Some`` value, else :obj:,
-        else :obj:`False`.
+        """Returns :obj:`True` if the option is a ``Some`` value, else
+        :obj:`False`.
+
         >>> x: Option[int] = Some(0)
         >>> True if x else False
         True
@@ -691,20 +692,20 @@ class None_(Option[T]):
             return Some(optb.unwrap())
         return None_()
 
-    def _make_some(self, val: T):
+    def _convert_to_some(self, val: T) -> Some[T]:
         # 🙈
         cast(Option[T], self).__class__ = cast(Type[Option[T]], Some)
         self._value = val
+        return cast(Some[T], self)
 
     def get_or_insert_with(self, f: Callable[[], T]) -> Ref[T]:
-        self._make_some(f())
-        return cast(Some, self)._make_value_ref()
+        return self._convert_to_some(f())._make_value_ref()
 
     def take(self) -> Option[T]:
         return None_()
 
     def replace(self, value: T) -> Option[T]:
-        self._make_some(value)
+        self._convert_to_some(value)
         return None_()
 
     def zip(self, other: Option[U]) -> Option[Tuple[T, U]]:
