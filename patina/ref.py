@@ -19,3 +19,6 @@ class Ref(Generic[T]):
     def set(self, value: T):
         """Update the value at the remote location."""
         self._set(value)
+
+    def __repr__(self):
+        return f"Ref({self.get()!r})"
