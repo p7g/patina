@@ -13,6 +13,7 @@ supported in Python.
 
 .. _Result: https://doc.rust-lang.org/std/result/enum.Result.html
 .. _Option: https://doc.rust-lang.org/std/option/enum.Option.html
+.. _HashMap: https://doc.rust-lang.org/std/collection/struct.HashMap.html
 
 .. toctree::
    :maxdepth: 2
@@ -20,6 +21,7 @@ supported in Python.
 
    option
    result
+   hashmap
 
 Indices and tables
 ==================
