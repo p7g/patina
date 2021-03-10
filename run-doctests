@@ -6,7 +6,7 @@ finder = doctest.DocTestFinder()
 
 for module_info in pkgutil.walk_packages(["patina"], prefix="patina."):
     module = importlib.import_module(module_info.name)
-    failure_count, _test_count = doctest.testmod(module)
+    failure_count, _test_count = doctest.testmod(module, optionflags=doctest.FAIL_FAST)
 
     if failure_count > 0:
         exit(1)
