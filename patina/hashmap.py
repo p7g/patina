@@ -148,29 +148,103 @@ _nothing = object()
 
 
 class Entry(ABC, t.Generic[K, V]):
+    """A view into a single entry into a map, which may either be vacant or
+    occupied.
+
+    This class is constructed from the :func:`entry` method on :class:`HashMap`.
+    """
+
     def __init__(self, table: "HashMap[K, V]", key: K):
         self._key = key
         self._table = table
 
     def or_insert(self, default: V) -> Ref[V]:
+        """Ensures a value is in the entry by inserting the default if empty,
+        and returns a mutable reference to the value in the entry.
+
+        >>> map = HashMap[str, int]()
+        >>> map.entry("poneyland").or_insert(3)
+        Ref(3)
+        >>> map["poneyland"]
+        3
+        >>> map.entry("poneyland").or_insert(10).modify(lambda v: v * 2)
+        Ref(6)
+        >>> map["poneyland"]
+        6
+        """
         return self.or_insert_with(lambda: default)
 
     @abstractmethod
     def or_insert_with(self, default: t.Callable[[], V]) -> Ref[V]:
-        ...
+        """Ensures a value is in the entry by inserting the result of the
+        default function if empty, and returns a mutable reference to the value
+        in the entry.
+
+        >>> map = HashMap[str, str]()
+        >>> s = "hoho"
+        >>> map.entry("poneyland").or_insert_with(lambda: s)
+        Ref('hoho')
+        >>> map["poneyland"]
+        'hoho'
+        """
 
     def or_insert_with_key(self, default: t.Callable[[K], V]) -> Ref[V]:
+        """Ensures a value is in the entry by inserting, if empty, the result of
+        the default function. This method allows for generating key-derived
+        values for insertion by providing the default function a reference to
+        the key that was moved during the ``.entry(key)`` method call (not
+        applicable to Python).
+
+        >>> map = HashMap[str, int]()
+        >>> map.entry("poneyland").or_insert_with_key(len)
+        Ref(9)
+        >>> map["poneyland"]
+        9
+        """
         return self.or_insert_with(partial(default, self._key))
 
     def key(self) -> K:
+        """Returns a reference to this entry's key.
+
+        >>> map = HashMap[str, int]()
+        >>> map.entry("poneyland").key()
+        'poneyland'
+        """
         return self._key
 
     @abstractmethod
     def and_modify(self, f: t.Callable[[Ref[V]], None]) -> "Entry[K, V]":
+        r"""Provides in-place mutable access to an occupied entry before any
+        potential inserts into the map.
+
+        >>> from patina import Ref
+        >>>
+        >>> map = HashMap[str, int]()
+        >>>
+        >>> def add_one(ref: Ref[int]):
+        ...     ref.modify(lambda val: val + 1)
         ...
+        >>>
+        >>> map.entry("poneyland") \
+        ...     .and_modify(add_one) \
+        ...     .or_insert(42)
+        Ref(42)
+        >>> map["poneyland"]
+        42
+        >>>
+        >>> map.entry("poneyland") \
+        ...     .and_modify(add_one) \
+        ...     .or_insert(42)
+        Ref(43)
+        >>> map["poneyland"]
+        43
+        """
 
 
 class OccupiedEntry(Entry[K, V]):
+    """A view into an occupied entry in a :class:`HashMap`. It is part of the
+    :class:`Entry` class hierarchy."""
+
     __match_args__ = ("_key", "_val")
 
     def _make_value_ref(self) -> Ref[V]:
@@ -184,20 +258,91 @@ class OccupiedEntry(Entry[K, V]):
         return self
 
     def remove_entry(self) -> t.Tuple[K, V]:
+        """Remove the entry from the map.
+
+        >>> map = HashMap[str, int]()
+        >>> map.entry("poneyland").or_insert(12)
+        Ref(12)
+        >>> o = map.entry("poneyland")
+        >>> if isinstance(o, OccupiedEntry):
+        ...     o.remove_entry()
+        ...
+        ('poneyland', 12)
+        >>> "poneyland" in map
+        False
+        """
         return self._table.remove_entry(self._key).unwrap()
 
     def get(self) -> V:
+        """Gets a reference to the value in the entry.
+
+        >>> map = HashMap[str, int]()
+        >>> map.entry("poneyland").or_insert(12)
+        Ref(12)
+        >>>
+        >>> o = map.entry("poneyland")
+        >>> if isinstance(o, OccupiedEntry):
+        ...     print(o.get())
+        ...
+        12
+        """
         return self._table[self._key]
 
     _val = property(get)
 
     def get_mut(self) -> Ref[V]:
+        """Gets a mutable reference to the value in the entry.
+
+        >>> map = HashMap[str, int]()
+        >>> map.entry("poneyland").or_insert(12)
+        Ref(12)
+        >>>
+        >>> map["poneyland"]
+        12
+        >>> o = map.entry("poneyland")
+        >>> if isinstance(o, OccupiedEntry):
+        ...     o.get_mut().modify(lambda v: v + 10)
+        ...     o.get_mut().modify(lambda v: v + 2)
+        ...
+        Ref(22)
+        Ref(24)
+        >>> map["poneyland"]
+        24
+        """
         return self._make_value_ref()
 
     def insert(self, value: V) -> V:
+        """Sets the value of the entry, and returns the entry's old value.
+
+        >>> map = HashMap[str, int]()
+        >>> map.entry("poneyland").or_insert(12)
+        Ref(12)
+        >>>
+        >>> o = map.entry("poneyland")
+        >>> if isinstance(o, OccupiedEntry):
+        ...     o.insert(15)
+        ...
+        12
+        >>> map["poneyland"]
+        15
+        """
         return self._table.insert(self._key, value).unwrap()
 
     def remove(self) -> V:
+        """Takes the value out of the entry, and returns it.
+
+        >>> map = HashMap[str, int]()
+        >>> map.entry("poneyland").or_insert(12)
+        Ref(12)
+        >>>
+        >>> o = map.entry("poneyland")
+        >>> if isinstance(o, OccupiedEntry):
+        ...     o.remove()
+        ...
+        12
+        >>> "poneyland" in map
+        False
+        """
         return self._table.remove(self._key).unwrap()
 
     def __repr__(self):
@@ -205,6 +350,9 @@ class OccupiedEntry(Entry[K, V]):
 
 
 class VacantEntry(Entry[K, V]):
+    """A view into a vacant entry in :class:`HashMap`. It is part of the
+    :class:`Entry` class hierarchy."""
+
     __match_args__ = ("_key",)
 
     def or_insert_with(self, default: t.Callable[[], V]) -> Ref[V]:
@@ -212,6 +360,18 @@ class VacantEntry(Entry[K, V]):
         return self._table._make_value_ref(self._key)
 
     def insert(self, value: V) -> Ref[V]:
+        """Sets the value of the entry with the :class:`VacantEntry`'s key, and
+        returns a mutable reference to it.
+
+        >>> map = HashMap[str, int]()
+        >>> o = map.entry("poneyland")
+        >>> if isinstance(o, VacantEntry):
+        ...     o.insert(37)
+        ...
+        Ref(37)
+        >>> map["poneyland"]
+        37
+        """
         return self.or_insert(value)
 
     def and_modify(self, f: t.Callable[[Ref[V]], None]) -> Entry[K, V]:
