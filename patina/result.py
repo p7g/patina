@@ -509,7 +509,7 @@ class Result(ABC, Generic[T, E]):
 class Ok(Result[T, E]):
     __slots__ = _Result_slots
 
-    def __init__(self, value):
+    def __init__(self, value: T):
         self._value = value
 
     def is_ok(self) -> bool:
@@ -564,7 +564,7 @@ class Ok(Result[T, E]):
 class Err(Result[T, E]):
     __slots__ = _Result_slots
 
-    def __init__(self, error):
+    def __init__(self, error: E):
         self._value = error
 
     def is_ok(self) -> bool:
