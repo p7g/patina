@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "patina"
-version = "0.3.0"
+version = "0.3.1"
 description = "Result and Option types for Python"
 authors = ["Patrick Gingras <775.pg.12@gmail.com>"]
 license = "MIT"
