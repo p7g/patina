@@ -13,7 +13,7 @@ run and type-checked as part of the CI pipeline as unit tests. The tests are
 direct ports of those in the Rust documentation.
 
 [original documentation]: https://doc.rust-lang.org/std/result/
-[docs]: https://result.readthedocs.io/en/latest
+[docs]: https://patina.readthedocs.io/en/latest/
 
 ## Why?
 
