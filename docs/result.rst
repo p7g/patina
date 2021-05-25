@@ -22,3 +22,4 @@ See the original Rust documentation here_.
 
    .. autoclass:: Result
       :members:
+      :special-members:

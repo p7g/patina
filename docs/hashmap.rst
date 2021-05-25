@@ -23,3 +23,4 @@ See the original Rust documentation here_.
 
    .. autoclass:: HashMap
       :members:
+      :special-members:
