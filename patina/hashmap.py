@@ -769,6 +769,22 @@ class HashMap(t.Generic[K, V]):
         self._dict[k] = v
         return result
 
+    def __setitem__(self, key: K, value: V) -> None:
+        """Inserts a key-value pair into the map.
+
+        >>> map = HashMap[int, str]()
+        >>> map[37] = "a"
+        >>> map.is_empty()
+        False
+        >>>
+        >>> map[37] = "b"
+        >>> map[37] = "c"
+        >>> map[37]
+        'c'
+        """
+
+        self.insert(key, value)
+
     def remove(self, key: K) -> Option[V]:
         """Removes a key from the map, returning the value at the key if the key
         was previously in the map.
