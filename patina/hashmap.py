@@ -687,8 +687,21 @@ class HashMap(t.Generic[K, V]):
 
         Raises :class:`KeyError` if the key is not present in the
         :class:`HashMap`.
+
+        >>> map = HashMap[int, str]()
+        >>> map[123] = "abc"
+        >>> map[123]
+        'abc'
+        >>> map[234]
+        Traceback (most recent call last):
+            ...
+        KeyError: 234
         """
-        return self.get(key).unwrap()
+
+        opt_val = self.get(key)
+        if opt_val.is_none():
+            raise KeyError(key)
+        return opt_val.unwrap()
 
     def contains_key(self, key: K) -> bool:
         """Returns :obj:`True` if the map contains a value for the specified
