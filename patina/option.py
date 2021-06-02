@@ -561,6 +561,31 @@ class Option(ABC, Generic[T]):
             return None_()
         return Some(opt)
 
+    @abstractmethod
+    def into_optional(self) -> Optional[T]:
+        """Get a typing.Optional[T] from an :class:`Option[T] <Option>`.
+
+        Returns :obj:`None` if ``self`` is :meth:`None_`, otherwise returns the
+        contained value.
+
+        >>> from typing import Optional
+        >>> x: Optional[int] = None
+        >>> opt = Option.from_optional(x)
+        >>> opt
+        None_
+        >>> opt.into_optional()
+        >>> assert x is opt.into_optional()
+        >>>
+        >>> x = 3
+        >>> opt = Option.from_optional(x)
+        >>> opt
+        Some(3)
+        >>> opt.into_optional()
+        3
+        >>> assert x is opt.into_optional()
+        """
+        ...
+
 
 class Some(Option[T]):
     __slots__ = _Option_slots
@@ -641,6 +666,9 @@ class Some(Option[T]):
     def __repr__(self):
         return f"Some({self._value!r})"
 
+    def into_optional(self) -> Optional[T]:
+        return self._value
+
 
 class None_(Option[T]):
     # None_ also needs the _value slot as well since we sometimes change it into
@@ -713,6 +741,9 @@ class None_(Option[T]):
 
     def __repr__(self):
         return "None_"
+
+    def into_optional(self) -> Optional[T]:
+        return None
 
 
 from .result import Result, Ok, Err  # noqa E402
