@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "patina"
-version = "0.4.0"
+version = "0.5.0"
 description = "Rusty types for Python"
 authors = ["Patrick Gingras <775.pg.12@gmail.com>"]
 license = "MIT"
